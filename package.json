@@ -1,0 +1,16 @@
+{
+  "name": "grow-system",
+  "version": "1.0.0",
+  "description": "Sistema completo de gerenciamento de cultivo",
+  "scripts": {
+    "start": "./start.sh",
+    "backup": "./backup.sh",
+    "reinstall": "./reinstall.sh"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "author": "Grow System",
+  "license": "MIT"
+}

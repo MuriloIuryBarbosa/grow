@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Parse Date</title>
+</head>
+<body>
+  <h1>Testing parseDate function</h1>
+  <div id="output"></div>
+  
+  <script>
+    const parseDate = (dateStr) => {
+      if (!dateStr) return new Date();
+      const normalized = dateStr.includes(' ') && !dateStr.includes('T') 
+        ? dateStr.replace(' ', 'T') 
+        : dateStr;
+      
+      if (!normalized.includes('T')) {
+        return new Date(normalized + 'T00:00:00');
+      }
+      return new Date(normalized);
+    };
+    
+    const testDates = [
+      '2025-11-19 00:00:00',
+      '2025-11-23 00:00:00',
+      '2025-12-08 16:00:00',
+      '2025-11-23',
+      '2025-12-08'
+    ];
+    
+    let output = '';
+    testDates.forEach(dateStr => {
+      try {
+        const parsed = parseDate(dateStr);
+        output += `${dateStr} => ${parsed.toString()} (Valid: ${!isNaN(parsed.getTime())})<br>`;
+      } catch (err) {
+        output += `${dateStr} => ERROR: ${err.message}<br>`;
+      }
+    });
+    
+    document.getElementById('output').innerHTML = output;
+    console.log('Test complete');
+  </script>
+</body>
+</html>
