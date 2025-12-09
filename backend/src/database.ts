@@ -62,6 +62,33 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_daily_records_plant ON daily_records(plant_id);
   CREATE INDEX IF NOT EXISTS idx_daily_records_date ON daily_records(record_date);
   CREATE INDEX IF NOT EXISTS idx_phase_history_plant ON phase_history(plant_id);
+
+  CREATE TABLE IF NOT EXISTS sensors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('temperature', 'humidity', 'temperature_humidity')),
+    location TEXT NOT NULL,
+    description TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT (datetime('now', '-3 hours')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now', '-3 hours'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sensor_readings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sensor_id INTEGER NOT NULL,
+    temperature REAL,
+    humidity REAL,
+    recorded_at TEXT NOT NULL DEFAULT (datetime('now', '-3 hours')),
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', '-3 hours')),
+    FOREIGN KEY (sensor_id) REFERENCES sensors(id) ON DELETE CASCADE,
+    CHECK (temperature IS NOT NULL OR humidity IS NOT NULL)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sensor_readings_sensor_id ON sensor_readings(sensor_id);
+  CREATE INDEX IF NOT EXISTS idx_sensor_readings_recorded_at ON sensor_readings(recorded_at);
+  CREATE INDEX IF NOT EXISTS idx_sensors_is_active ON sensors(is_active);
 `);
 
 export default db;

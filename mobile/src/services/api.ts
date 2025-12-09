@@ -2,9 +2,9 @@ import axios from 'axios';
 import { Plant, DailyRecord, Statistics, Sensor, SensorReading } from '../types';
 
 // Para desenvolvimento, use o IP da sua máquina (não localhost)
-// Exemplo: 'http://192.168.1.100:3000'
-// Para rodar no Android Emulator, use: 'http://10.0.2.2:3000'
-const API_URL = 'http://10.0.2.2:3000';
+// iOS: Use o IP da rede local
+// Android Emulator: Use 'http://10.0.2.2:3000'
+const API_URL = 'http://192.168.1.6:3000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -43,32 +43,37 @@ export const plantsAPI = {
     const { data } = await api.put<Plant>(`/plants/${id}/phase`, { phase });
     return data;
   },
+
+  updateProfilePhoto: async (id: number, photoUri: string) => {
+    const { data } = await api.patch<Plant>(`/plants/${id}/profile-photo`, { profile_photo: photoUri });
+    return data;
+  },
 };
 
 // Records API
 export const recordsAPI = {
   getByPlant: async (plantId: number) => {
-    const { data } = await api.get<DailyRecord[]>(`/plants/${plantId}/records`);
+    const { data } = await api.get<DailyRecord[]>(`/records/plant/${plantId}`);
     return data;
   },
   
   getById: async (plantId: number, recordId: number) => {
-    const { data } = await api.get<DailyRecord>(`/plants/${plantId}/records/${recordId}`);
+    const { data } = await api.get<DailyRecord>(`/records/${recordId}`);
     return data;
   },
   
   create: async (plantId: number, recordData: Partial<DailyRecord>) => {
-    const { data } = await api.post<DailyRecord>(`/plants/${plantId}/records`, recordData);
+    const { data } = await api.post<DailyRecord>(`/records`, { ...recordData, plant_id: plantId });
     return data;
   },
   
   update: async (plantId: number, recordId: number, recordData: Partial<DailyRecord>) => {
-    const { data } = await api.put<DailyRecord>(`/plants/${plantId}/records/${recordId}`, recordData);
+    const { data } = await api.put<DailyRecord>(`/records/${recordId}`, recordData);
     return data;
   },
   
   delete: async (plantId: number, recordId: number) => {
-    await api.delete(`/plants/${plantId}/records/${recordId}`);
+    await api.delete(`/records/${recordId}`);
   },
 };
 
@@ -82,18 +87,13 @@ export const statisticsAPI = {
 
 // Sensors API
 export const sensorsAPI = {
-  getAll: async (includeInactive = false) => {
-    const { data } = await api.get<Sensor[]>(`/sensors?include_inactive=${includeInactive}`);
+  getAll: async () => {
+    const { data } = await api.get<Sensor[]>('/sensors');
     return data;
   },
   
   getById: async (id: number) => {
     const { data } = await api.get<Sensor>(`/sensors/${id}`);
-    return data;
-  },
-  
-  getLatest: async () => {
-    const { data } = await api.get<any[]>('/sensors/latest');
     return data;
   },
   
@@ -104,11 +104,6 @@ export const sensorsAPI = {
   
   update: async (id: number, sensorData: Partial<Sensor>) => {
     const { data } = await api.put<Sensor>(`/sensors/${id}`, sensorData);
-    return data;
-  },
-  
-  toggle: async (id: number, isActive: boolean) => {
-    const { data } = await api.patch<Sensor>(`/sensors/${id}/toggle`, { is_active: isActive });
     return data;
   },
   
@@ -124,48 +119,19 @@ export const readingsAPI = {
     return data;
   },
   
-  getLatestBySensor: async (sensorId: number) => {
-    const { data } = await api.get<SensorReading>(`/sensors/${sensorId}/readings/latest`);
+  getLatest: async () => {
+    const { data} = await api.get<any[]>('/sensor-readings/latest');
     return data;
   },
   
-  getStats: async (sensorId?: number) => {
-    const endpoint = sensorId ? `/sensors/${sensorId}/stats` : '/readings/stats';
-    const { data } = await api.get<any>(endpoint);
-    return data;
-  },
-  
-  getDailyAverages: async (startDate: string, endDate: string, sensorId?: number) => {
-    const params: any = { start_date: startDate, end_date: endDate };
-    if (sensorId) params.sensor_id = sensorId;
-    const { data } = await api.get<any[]>('/readings/daily', { params });
-    return data;
-  },
-  
-  getByRange: async (startDate: string, endDate: string, sensorId?: number) => {
-    const params: any = { start_date: startDate, end_date: endDate };
-    if (sensorId) params.sensor_id = sensorId;
-    const { data } = await api.get<any[]>('/readings/range', { params });
+  getDailyAverages: async (days = 7) => {
+    const { data } = await api.get<any[]>(`/sensor-readings/daily-averages?days=${days}`);
     return data;
   },
   
   create: async (readingData: Partial<SensorReading>) => {
-    const { data } = await api.post<SensorReading>('/readings', readingData);
+    const { data } = await api.post<SensorReading>('/sensor-readings', readingData);
     return data;
-  },
-  
-  createBatch: async (readings: Partial<SensorReading>[]) => {
-    const { data } = await api.post<SensorReading[]>('/readings/batch', { readings });
-    return data;
-  },
-  
-  update: async (id: number, readingData: Partial<SensorReading>) => {
-    const { data } = await api.put<SensorReading>(`/readings/${id}`, readingData);
-    return data;
-  },
-  
-  delete: async (id: number) => {
-    await api.delete(`/readings/${id}`);
   },
 };
 

@@ -11,6 +11,7 @@ import NewRecordScreen from '../screens/NewRecordScreen';
 import EditRecordScreen from '../screens/EditRecordScreen';
 import SensorsScreen from '../screens/SensorsScreen';
 import RecordReadingScreen from '../screens/RecordReadingScreen';
+import NewSensorReadingScreen from '../screens/NewSensorReadingScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -21,6 +22,7 @@ export type RootStackParamList = {
   EditRecord: { plantId: number; recordId: number };
   Sensors: undefined;
   RecordReading: undefined;
+  NewSensorReading: { sensor_id: number; sensor_name: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -79,6 +81,11 @@ export default function AppNavigator() {
           name="RecordReading"
           component={RecordReadingScreen}
           options={{ title: 'Registrar Leitura' }}
+        />
+        <Stack.Screen
+          name="NewSensorReading"
+          component={NewSensorReadingScreen}
+          options={{ title: 'Nova Leitura de Sensor' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

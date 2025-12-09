@@ -27,6 +27,7 @@ export interface Plant {
   failure_date?: string;
   failure_reason?: string;
   photo_path?: string;
+  profile_photo?: string;
   created_at?: string;
   phase_history?: PhaseHistory[];
 }

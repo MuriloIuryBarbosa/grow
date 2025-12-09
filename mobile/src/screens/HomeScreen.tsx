@@ -15,6 +15,8 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { usePlants } from '../hooks/usePlants';
 import { Plant } from '../types';
 import { formatDateLocal } from '../utils/date.utils';
+import PlantCard from '../components/PlantCard';
+import SensorDashboard from '../components/SensorDashboard';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -59,32 +61,10 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const renderPlantCard = ({ item }: { item: Plant }) => (
-    <TouchableOpacity
-      style={styles.card}
+    <PlantCard
+      plant={item}
       onPress={() => navigation.navigate('PlantDetail', { id: item.id! })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{item.name}</Text>
-        <Text style={styles.cardCode}>{item.code}</Text>
-      </View>
-      
-      <View style={styles.cardBody}>
-        <Text style={styles.cardInfo}>
-          <Text style={styles.label}>Fase:</Text> {PHASE_LABELS[item.current_phase]}
-        </Text>
-        <Text style={styles.cardInfo}>
-          <Text style={styles.label}>Status:</Text> {STATUS_LABELS[item.status]}
-        </Text>
-        <Text style={styles.cardInfo}>
-          <Text style={styles.label}>Plantio:</Text> {formatDateLocal(item.planting_date)}
-        </Text>
-        {item.germination_date && (
-          <Text style={styles.cardInfo}>
-            <Text style={styles.label}>Germinação:</Text> {formatDateLocal(item.germination_date)}
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
+    />
   );
 
   const renderDashboard = () => {
@@ -132,18 +112,15 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </View>
 
+        <Text style={styles.sectionTitle}>📊 Dados dos Sensores</Text>
+        <SensorDashboard />
+
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigation.navigate('Sensors')}
           >
-            <Text style={styles.buttonText}>🌡️ Sensores</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('RecordReading')}
-          >
-            <Text style={styles.buttonText}>📊 Registrar Leitura</Text>
+            <Text style={styles.buttonText}>🌡️ Gerenciar Sensores</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

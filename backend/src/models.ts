@@ -376,8 +376,8 @@ export const DailyRecordModel = {
 
   // Atualizar registro
   update(id: number, record: Partial<DailyRecord>): boolean {
-    const fields = [];
-    const values = [];
+    const fields: string[] = [];
+    const values: any[] = [];
 
     Object.entries(record).forEach(([key, value]) => {
       if (key !== 'id' && key !== 'created_at' && value !== undefined) {

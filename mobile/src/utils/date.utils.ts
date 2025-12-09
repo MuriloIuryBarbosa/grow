@@ -1,4 +1,4 @@
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 const TIMEZONE = 'America/Sao_Paulo';
@@ -101,4 +101,31 @@ export function daysDiff(date1: Date | string, date2: Date | string): number {
   
   const diffTime = Math.abs(d2.getTime() - d1.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Format a date to display
+ */
+export function formatDate(date: string | Date, formatStr: string = 'dd/MM/yyyy'): string {
+  try {
+    const parsedDate = typeof date === 'string' ? parseDate(date) : date;
+    return format(parsedDate, formatStr);
+  } catch (err) {
+    console.error('Error formatting date:', date, err);
+    return 'Data inválida';
+  }
+}
+
+/**
+ * Calculate days between two dates
+ */
+export function daysBetween(startDate: string | Date, endDate: string | Date = new Date()): number {
+  try {
+    const start = typeof startDate === 'string' ? parseDate(startDate) : startDate;
+    const end = typeof endDate === 'string' ? parseDate(endDate) : endDate;
+    return differenceInDays(end, start);
+  } catch (err) {
+    console.error('Error calculating days:', startDate, endDate, err);
+    return 0;
+  }
 }
