@@ -1,0 +1,33 @@
+{
+  "brand": {
+    "primary": "#2E7D32",
+    "primaryLight": "#4CAF50",
+    "primaryDark": "#1B5E20",
+    "secondary": "#81C784",
+    "secondaryLight": "#C8E6C9",
+    "accent": "#E8F5E9"
+  },
+  "earth": {
+    "brown": "#795548",
+    "brownLight": "#8D6E63",
+    "brownDark": "#5D4037",
+    "soil": "#3E2723"
+  },
+  "ui": {
+    "background": "#FAFAFA",
+    "surface": "#FFFFFF",
+    "text": "#212121",
+    "textSecondary": "#757575",
+    "border": "#E0E0E0",
+    "error": "#D32F2F",
+    "warning": "#F57C00",
+    "success": "#388E3C"
+  },
+  "phases": {
+    "germination": "#8BC34A",
+    "seedling": "#4CAF50",
+    "vegetative": "#2E7D32",
+    "flowering": "#E91E63",
+    "harvest": "#FF9800"
+  }
+}
