@@ -6,7 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -27,8 +30,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "shurigrow"
+        "projectId": "b3cfa465-2472-4278-873a-8bb0c237122c"
       }
-    }
+    },
+    "owner": "shurillo"
   }
 }
