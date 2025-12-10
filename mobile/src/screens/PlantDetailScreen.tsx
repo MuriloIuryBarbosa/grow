@@ -149,7 +149,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
 
       // Upload da foto
       const formData = new FormData();
-      formData.append('file', {
+      formData.append('photo', {
         uri: manipulatedImage.uri,
         type: 'image/jpeg',
         name: `profile_${id}_${Date.now()}.jpg`,
@@ -165,7 +165,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
         }
       );
 
-      const photoPath = uploadResponse.data.path;
+      const photoPath = uploadResponse.data.photoPath;
 
       // Atualizar foto de perfil da planta
       await plantsAPI.updateProfilePhoto(id, photoPath);
