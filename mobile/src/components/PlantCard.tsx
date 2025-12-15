@@ -53,10 +53,22 @@ export default function PlantCard({ plant, onPress }: PlantCardProps) {
 
   return (
     <TouchableOpacity
-      style={[styles.card, !hasRecordToday && !loading && styles.cardAlert]}
+      style={[
+        styles.card, 
+        !hasRecordToday && !loading && plant.status === 'ativa' && styles.cardAlert,
+        plant.status === 'morta' && styles.cardDead,
+        plant.status === 'falha_germinacao' && styles.cardFailed,
+      ]}
       onPress={onPress}
     >
-      {!hasRecordToday && !loading && (
+      {plant.status !== 'ativa' && (
+        <View style={[styles.deadBadge, plant.status === 'falha_germinacao' && styles.failedBadge]}>
+          <Text style={styles.deadBadgeText}>
+            {plant.status === 'morta' ? '💀 Morta' : '❌ Falha'}
+          </Text>
+        </View>
+      )}
+      {!hasRecordToday && !loading && plant.status === 'ativa' && (
         <View style={styles.alertBadge}>
           <Text style={styles.alertText}>⚠️ Sem registro hoje</Text>
         </View>
@@ -111,6 +123,34 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#f59e0b',
     backgroundColor: '#fffbeb',
+  },
+  cardDead: {
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    backgroundColor: '#fef2f2',
+    opacity: 0.8,
+  },
+  cardFailed: {
+    borderWidth: 2,
+    borderColor: '#f97316',
+    backgroundColor: '#fff7ed',
+    opacity: 0.8,
+  },
+  deadBadge: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+  failedBadge: {
+    backgroundColor: '#f97316',
+  },
+  deadBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   alertBadge: {
     backgroundColor: '#f59e0b',

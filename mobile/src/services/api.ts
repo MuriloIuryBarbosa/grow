@@ -48,6 +48,15 @@ export const plantsAPI = {
     const { data } = await api.patch<Plant>(`/plants/${id}/profile-photo`, { profile_photo: photoUri });
     return data;
   },
+
+  updateStatus: async (id: number, status: Plant['status'], failureReason?: string) => {
+    const { data } = await api.patch<Plant>(`/plants/${id}/status`, { 
+      status, 
+      failure_reason: failureReason,
+      failure_date: new Date().toISOString().split('T')[0]
+    });
+    return data;
+  },
 };
 
 // Records API

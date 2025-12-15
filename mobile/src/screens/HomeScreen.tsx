@@ -40,7 +40,7 @@ const STATUS_LABELS = {
 export default function HomeScreen({ navigation }: Props) {
   const { plants, loading, error, refetch } = usePlants();
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'plants'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'plants' | 'dead'>('dashboard');
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -48,14 +48,19 @@ export default function HomeScreen({ navigation }: Props) {
     setRefreshing(false);
   };
 
+  // Separar plantas ativas e mortas
+  const activePlants = plants.filter(p => p.status === 'ativa');
+  const deadPlants = plants.filter(p => p.status === 'morta' || p.status === 'falha_germinacao');
+
   const getStats = () => {
     const stats = {
       total: plants.length,
-      germinacao: plants.filter((p) => p.current_phase === 'germinacao').length,
-      muda: plants.filter((p) => p.current_phase === 'muda').length,
-      vegetacao: plants.filter((p) => p.current_phase === 'vegetacao').length,
-      floracao: plants.filter((p) => p.current_phase === 'floracao').length,
-      ativas: plants.filter((p) => p.status === 'ativa').length,
+      germinacao: activePlants.filter((p) => p.current_phase === 'germinacao').length,
+      muda: activePlants.filter((p) => p.current_phase === 'muda').length,
+      vegetacao: activePlants.filter((p) => p.current_phase === 'vegetacao').length,
+      floracao: activePlants.filter((p) => p.current_phase === 'floracao').length,
+      ativas: activePlants.length,
+      mortas: deadPlants.length,
     };
     return stats;
   };
@@ -88,7 +93,26 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Por Fase</Text>
+        {/* Card de Plantas Mortas */}
+        {stats.mortas > 0 && (
+          <TouchableOpacity 
+            style={styles.deadCard}
+            onPress={() => setActiveTab('dead')}
+          >
+            <View style={styles.deadCardContent}>
+              <Text style={styles.deadCardIcon}>💀</Text>
+              <View style={styles.deadCardInfo}>
+                <Text style={styles.deadCardValue}>{stats.mortas}</Text>
+                <Text style={styles.deadCardLabel}>
+                  {stats.mortas === 1 ? 'Planta Morta' : 'Plantas Mortas'}
+                </Text>
+              </View>
+              <Text style={styles.deadCardArrow}>›</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <Text style={styles.sectionTitle}>Por Fase (Ativas)</Text>
         <View style={styles.phaseGrid}>
           <View style={[styles.phaseCard, styles.germinacaoCard]}>
             <Text style={styles.phaseEmoji}>🌱</Text>
@@ -147,23 +171,62 @@ export default function HomeScreen({ navigation }: Props) {
       );
     }
 
-    if (plants.length === 0) {
+    if (activePlants.length === 0) {
       return (
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Nenhuma planta cadastrada</Text>
+          <Text style={styles.emptyText}>Nenhuma planta ativa</Text>
         </View>
       );
     }
 
     return (
       <FlatList
-        data={plants}
+        data={activePlants}
         keyExtractor={(item) => item.id!.toString()}
         renderItem={renderPlantCard}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         contentContainerStyle={styles.listContainer}
+      />
+    );
+  };
+
+  const renderDeadPlants = () => {
+    if (loading && !refreshing) {
+      return (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#2d5016" />
+        </View>
+      );
+    }
+
+    if (deadPlants.length === 0) {
+      return (
+        <View style={styles.centered}>
+          <Text style={styles.emptyIcon}>🌱</Text>
+          <Text style={styles.emptyText}>Nenhuma planta morta</Text>
+          <Text style={styles.emptySubtext}>Suas plantas estão todas saudáveis!</Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={deadPlants}
+        keyExtractor={(item) => item.id!.toString()}
+        renderItem={renderPlantCard}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={styles.listContainer}
+        ListHeaderComponent={
+          <View style={styles.deadListHeader}>
+            <Text style={styles.deadListHeaderText}>
+              💀 {deadPlants.length} {deadPlants.length === 1 ? 'planta morta' : 'plantas mortas'}
+            </Text>
+          </View>
+        }
       />
     );
   };
@@ -184,12 +247,20 @@ export default function HomeScreen({ navigation }: Props) {
           onPress={() => setActiveTab('plants')}
         >
           <Text style={[styles.tabText, activeTab === 'plants' && styles.activeTabText]}>
-            Plantas
+            Ativas ({activePlants.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'dead' && styles.activeTab, activeTab === 'dead' && styles.deadTab]}
+          onPress={() => setActiveTab('dead')}
+        >
+          <Text style={[styles.tabText, activeTab === 'dead' && styles.activeTabText, activeTab === 'dead' && styles.deadTabText]}>
+            💀 Mortas ({deadPlants.length})
           </Text>
         </TouchableOpacity>
       </View>
 
-      {activeTab === 'dashboard' ? renderDashboard() : renderPlants()}
+      {activeTab === 'dashboard' ? renderDashboard() : activeTab === 'plants' ? renderPlants() : renderDeadPlants()}
 
       <TouchableOpacity
         style={styles.fab}
@@ -221,13 +292,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#2d5016',
   },
+  deadTab: {
+    borderBottomColor: '#ef4444',
+  },
   tabText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
   },
   activeTabText: {
     color: '#2d5016',
     fontWeight: 'bold',
+  },
+  deadTabText: {
+    color: '#ef4444',
   },
   dashboard: {
     flex: 1,
@@ -260,6 +337,38 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
     textAlign: 'center',
+  },
+  deadCard: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  deadCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deadCardIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  deadCardInfo: {
+    flex: 1,
+  },
+  deadCardValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#dc2626',
+  },
+  deadCardLabel: {
+    fontSize: 14,
+    color: '#991b1b',
+  },
+  deadCardArrow: {
+    fontSize: 24,
+    color: '#dc2626',
   },
   sectionTitle: {
     fontSize: 18,
@@ -368,6 +477,28 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#666',
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+  },
+  deadListHeader: {
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ef4444',
+  },
+  deadListHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#dc2626',
   },
   fab: {
     position: 'absolute',

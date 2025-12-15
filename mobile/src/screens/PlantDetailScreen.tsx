@@ -69,6 +69,79 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const handleMarkAsDead = () => {
+    if (plant?.status === 'morta') {
+      // Reativar planta
+      Alert.alert(
+        'Reativar Planta',
+        'Deseja reativar esta planta?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Reativar',
+            onPress: async () => {
+              try {
+                await plantsAPI.updateStatus(id, 'ativa');
+                await refetch();
+                Alert.alert('Sucesso', 'Planta reativada!');
+              } catch (err) {
+                Alert.alert('Erro', 'Não foi possível reativar a planta');
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    Alert.alert(
+      '💀 Marcar como Morta',
+      'Escolha o motivo:',
+      [
+        {
+          text: 'Falha na Germinação',
+          onPress: () => confirmMarkAsDead('falha_germinacao', 'Falha na germinação'),
+        },
+        {
+          text: 'Praga/Doença',
+          onPress: () => confirmMarkAsDead('morta', 'Praga ou doença'),
+        },
+        {
+          text: 'Erro de Cultivo',
+          onPress: () => confirmMarkAsDead('morta', 'Erro de cultivo'),
+        },
+        {
+          text: 'Outro Motivo',
+          onPress: () => confirmMarkAsDead('morta', 'Outro motivo'),
+        },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    );
+  };
+
+  const confirmMarkAsDead = (status: 'morta' | 'falha_germinacao', reason: string) => {
+    Alert.alert(
+      'Confirmar',
+      `Tem certeza que deseja marcar esta planta como ${status === 'falha_germinacao' ? 'falha na germinação' : 'morta'}?\n\nMotivo: ${reason}`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await plantsAPI.updateStatus(id, status, reason);
+              await refetch();
+              Alert.alert('Sucesso', 'Status atualizado');
+            } catch (err) {
+              Alert.alert('Erro', 'Não foi possível atualizar o status');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleProfilePhoto = async () => {
     Alert.alert(
       'Foto de Perfil',
@@ -236,6 +309,31 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      {/* Banner de Status Morta */}
+      {plant.status !== 'ativa' && (
+        <View style={[styles.statusBanner, plant.status === 'morta' ? styles.statusBannerDead : styles.statusBannerFailed]}>
+          <Text style={styles.statusBannerIcon}>
+            {plant.status === 'morta' ? '💀' : '❌'}
+          </Text>
+          <View style={styles.statusBannerContent}>
+            <Text style={styles.statusBannerTitle}>
+              {plant.status === 'morta' ? 'Planta Morta' : 'Falha na Germinação'}
+            </Text>
+            {plant.failure_reason && (
+              <Text style={styles.statusBannerReason}>{plant.failure_reason}</Text>
+            )}
+            {plant.failure_date && (
+              <Text style={styles.statusBannerDate}>
+                Data: {formatDate(plant.failure_date)}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity style={styles.reactivateButton} onPress={handleMarkAsDead}>
+            <Text style={styles.reactivateButtonText}>🔄</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Header com ações */}
       <View style={styles.header}>
         <Text style={styles.title}>{plant.name}</Text>
@@ -345,8 +443,10 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
               style={[
                 styles.phaseButton,
                 plant.current_phase === phase && styles.phaseButtonActive,
+                plant.status !== 'ativa' && styles.phaseButtonDisabled,
               ]}
               onPress={() => handlePhaseChange(phase)}
+              disabled={plant.status !== 'ativa'}
             >
               <Text
                 style={[
@@ -359,6 +459,16 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Botão Marcar como Morta */}
+        {plant.status === 'ativa' && (
+          <TouchableOpacity
+            style={styles.markDeadButton}
+            onPress={handleMarkAsDead}
+          >
+            <Text style={styles.markDeadButtonText}>💀 Marcar como Morta</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Gráfico de Evolução */}
@@ -578,6 +688,10 @@ const styles = StyleSheet.create({
   phaseButtonActive: {
     backgroundColor: '#4CAF50',
   },
+  phaseButtonDisabled: {
+    opacity: 0.5,
+    borderColor: '#999',
+  },
   phaseButtonText: {
     fontSize: 14,
     color: '#4CAF50',
@@ -585,6 +699,67 @@ const styles = StyleSheet.create({
   },
   phaseButtonTextActive: {
     color: '#fff',
+  },
+  markDeadButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#ff5252',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  markDeadButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  statusBannerDead: {
+    backgroundColor: '#ffebee',
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  statusBannerFailed: {
+    backgroundColor: '#fff3e0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff9800',
+  },
+  statusBannerIcon: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  statusBannerContent: {
+    flex: 1,
+  },
+  statusBannerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  statusBannerReason: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  statusBannerDate: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  reactivateButton: {
+    padding: 8,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 20,
+  },
+  reactivateButtonText: {
+    fontSize: 20,
   },
   recordsHeader: {
     flexDirection: 'row',
