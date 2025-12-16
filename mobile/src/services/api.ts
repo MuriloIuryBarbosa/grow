@@ -102,6 +102,16 @@ export const statisticsAPI = {
     const { data } = await api.get<PhaseStatistics[]>('/statistics/phases');
     return data;
   },
+
+  getGeneticMetrics: async () => {
+    const { data } = await api.get<GeneticMetrics[]>('/statistics/genetics');
+    return data;
+  },
+
+  getGeneticMetricsById: async (id: number) => {
+    const { data } = await api.get<GeneticMetricsDetail>(`/statistics/genetics/${id}`);
+    return data;
+  },
 };
 
 // Phase Statistics Type
@@ -111,6 +121,47 @@ export interface PhaseStatistics {
   avg_days: number | null;
   min_days: number | null;
   max_days: number | null;
+}
+
+// Genetic Metrics Types
+export interface GeneticMetrics {
+  id: number;
+  name: string;
+  breeder: string | null;
+  type: string | null;
+  difficulty: string | null;
+  flowering_time_min: number | null;
+  flowering_time_max: number | null;
+  total_plants: number;
+  active_plants: number;
+  dead_plants: number;
+  germination_failures: number;
+  success_rate: number | null;
+  germination_rate: number | null;
+  evolution: {
+    avg_phase_duration: number | null;
+    min_phase_duration: number | null;
+    max_phase_duration: number | null;
+    plants_with_history: number;
+  };
+  growth: {
+    max_height: number | null;
+    avg_height: number | null;
+  };
+  quality_score: number | null;
+}
+
+export interface GeneticMetricsDetail {
+  genetic: any;
+  plants: any[];
+  phaseStats: any[];
+  timeline: any[];
+  summary: {
+    total_plants: number;
+    active_plants: number;
+    dead_plants: number;
+    germination_failures: number;
+  };
 }
 
 // Sensors API

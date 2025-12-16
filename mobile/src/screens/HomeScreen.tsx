@@ -290,41 +290,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'dashboard' && styles.activeTab]}
-          onPress={() => setActiveTab('dashboard')}
-        >
-          <Text style={[styles.tabText, activeTab === 'dashboard' && styles.activeTabText]}>
-            Dashboard
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'plants' && styles.activeTab]}
-          onPress={() => setActiveTab('plants')}
-        >
-          <Text style={[styles.tabText, activeTab === 'plants' && styles.activeTabText]}>
-            Ativas ({activePlants.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'dead' && styles.activeTab, activeTab === 'dead' && styles.deadTab]}
-          onPress={() => setActiveTab('dead')}
-        >
-          <Text style={[styles.tabText, activeTab === 'dead' && styles.activeTabText, activeTab === 'dead' && styles.deadTabText]}>
-            💀 Mortas ({deadPlants.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {activeTab === 'dashboard' ? renderDashboard() : activeTab === 'plants' ? renderPlants() : renderDeadPlants()}
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('NewPlant')}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      {renderDashboard()}
     </SafeAreaView>
   );
 }

@@ -256,6 +256,205 @@ router.get('/statistics/phases', (req: Request, res: Response) => {
   }
 });
 
+// Métricas de genéticas - Motor de cálculo de qualidade
+router.get('/statistics/genetics', (req: Request, res: Response) => {
+  try {
+    // Buscar todas as genéticas com métricas calculadas
+    const geneticMetrics = db.prepare(`
+      SELECT 
+        gs.id,
+        gs.name,
+        gs.breeder,
+        gs.type,
+        gs.difficulty,
+        gs.flowering_time_min,
+        gs.flowering_time_max,
+        -- Contadores de plantas
+        COUNT(p.id) as total_plants,
+        SUM(CASE WHEN p.status = 'ativa' THEN 1 ELSE 0 END) as active_plants,
+        SUM(CASE WHEN p.status = 'morta' THEN 1 ELSE 0 END) as dead_plants,
+        SUM(CASE WHEN p.status = 'falha_germinacao' THEN 1 ELSE 0 END) as germination_failures,
+        -- Taxa de sucesso (plantas que não morreram / total)
+        CASE 
+          WHEN COUNT(p.id) > 0 
+          THEN ROUND(CAST(SUM(CASE WHEN p.status = 'ativa' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(p.id) * 100, 1)
+          ELSE NULL 
+        END as success_rate,
+        -- Taxa de germinação (plantas que passaram da germinação / total)
+        CASE 
+          WHEN COUNT(p.id) > 0 
+          THEN ROUND(CAST(SUM(CASE WHEN p.status != 'falha_germinacao' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(p.id) * 100, 1)
+          ELSE NULL 
+        END as germination_rate
+      FROM genetic_strains gs
+      LEFT JOIN plants p ON p.genetic_id = gs.id
+      WHERE gs.is_active = 1
+      GROUP BY gs.id
+      ORDER BY 
+        CASE WHEN COUNT(p.id) > 0 THEN 0 ELSE 1 END,
+        success_rate DESC NULLS LAST,
+        total_plants DESC
+    `).all();
+
+    // Para cada genética, buscar métricas de evolução
+    const geneticsWithEvolution = (geneticMetrics as any[]).map(genetic => {
+      // Buscar dados de evolução das plantas dessa genética
+      const evolutionData = db.prepare(`
+        SELECT 
+          AVG(ph.duration_days) as avg_phase_duration,
+          MIN(ph.duration_days) as min_phase_duration,
+          MAX(ph.duration_days) as max_phase_duration,
+          COUNT(DISTINCT p.id) as plants_with_history
+        FROM phase_history ph
+        JOIN plants p ON ph.plant_id = p.id
+        WHERE p.genetic_id = ?
+          AND ph.duration_days IS NOT NULL 
+          AND ph.duration_days > 0
+      `).get(genetic.id) as any;
+
+      // Buscar maior altura registrada
+      const sizeData = db.prepare(`
+        SELECT 
+          MAX(dr.plant_size) as max_height,
+          AVG(dr.plant_size) as avg_height
+        FROM daily_records dr
+        JOIN plants p ON dr.plant_id = p.id
+        WHERE p.genetic_id = ?
+          AND dr.plant_size IS NOT NULL
+      `).get(genetic.id) as any;
+
+      // Calcular score de qualidade (0-100)
+      let qualityScore = 0;
+      let scoreFactors = 0;
+
+      // Fator 1: Taxa de sucesso (peso 40%)
+      if (genetic.success_rate !== null) {
+        qualityScore += genetic.success_rate * 0.4;
+        scoreFactors++;
+      }
+
+      // Fator 2: Taxa de germinação (peso 30%)
+      if (genetic.germination_rate !== null) {
+        qualityScore += genetic.germination_rate * 0.3;
+        scoreFactors++;
+      }
+
+      // Fator 3: Consistência de evolução - menor variação é melhor (peso 15%)
+      if (evolutionData?.avg_phase_duration && evolutionData?.max_phase_duration) {
+        const variance = evolutionData.max_phase_duration - (evolutionData.min_phase_duration || 0);
+        const consistencyScore = Math.max(0, 100 - (variance * 2));
+        qualityScore += consistencyScore * 0.15;
+        scoreFactors++;
+      }
+
+      // Fator 4: Volume de dados - mais dados = mais confiável (peso 15%)
+      if (genetic.total_plants > 0) {
+        const dataScore = Math.min(100, genetic.total_plants * 20);
+        qualityScore += dataScore * 0.15;
+        scoreFactors++;
+      }
+
+      return {
+        ...genetic,
+        evolution: {
+          avg_phase_duration: evolutionData?.avg_phase_duration ? Math.round(evolutionData.avg_phase_duration * 10) / 10 : null,
+          min_phase_duration: evolutionData?.min_phase_duration || null,
+          max_phase_duration: evolutionData?.max_phase_duration || null,
+          plants_with_history: evolutionData?.plants_with_history || 0,
+        },
+        growth: {
+          max_height: sizeData?.max_height || null,
+          avg_height: sizeData?.avg_height ? Math.round(sizeData.avg_height * 10) / 10 : null,
+        },
+        quality_score: scoreFactors > 0 ? Math.round(qualityScore) : null,
+      };
+    });
+
+    res.json(geneticsWithEvolution);
+  } catch (error: any) {
+    console.error('Erro ao buscar métricas genéticas:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar métricas genéticas' });
+  }
+});
+
+// Métricas de uma genética específica
+router.get('/statistics/genetics/:id', (req: Request, res: Response) => {
+  try {
+    const geneticId = Number(req.params.id);
+
+    // Buscar genética
+    const genetic = db.prepare(`
+      SELECT * FROM genetic_strains WHERE id = ?
+    `).get(geneticId);
+
+    if (!genetic) {
+      return res.status(404).json({ error: 'Genética não encontrada' });
+    }
+
+    // Buscar todas as plantas dessa genética
+    const plants = db.prepare(`
+      SELECT 
+        id, name, code, status, current_phase, 
+        planting_date, failure_date, failure_reason
+      FROM plants 
+      WHERE genetic_id = ?
+      ORDER BY 
+        CASE status WHEN 'ativa' THEN 0 ELSE 1 END,
+        planting_date DESC
+    `).all(geneticId);
+
+    // Estatísticas por fase
+    const phaseStats = db.prepare(`
+      SELECT 
+        ph.phase,
+        COUNT(*) as count,
+        AVG(ph.duration_days) as avg_days,
+        MIN(ph.duration_days) as min_days,
+        MAX(ph.duration_days) as max_days
+      FROM phase_history ph
+      JOIN plants p ON ph.plant_id = p.id
+      WHERE p.genetic_id = ?
+        AND ph.duration_days IS NOT NULL
+      GROUP BY ph.phase
+    `).all(geneticId);
+
+    // Timeline de eventos
+    const timeline = db.prepare(`
+      SELECT 
+        'plant_created' as event_type,
+        p.name as description,
+        p.planting_date as event_date
+      FROM plants p
+      WHERE p.genetic_id = ?
+      UNION ALL
+      SELECT 
+        'plant_died' as event_type,
+        p.name || ': ' || COALESCE(p.failure_reason, 'Sem causa registrada') as description,
+        p.failure_date as event_date
+      FROM plants p
+      WHERE p.genetic_id = ? AND p.status IN ('morta', 'falha_germinacao')
+      ORDER BY event_date DESC
+      LIMIT 20
+    `).all(geneticId, geneticId);
+
+    res.json({
+      genetic,
+      plants,
+      phaseStats,
+      timeline,
+      summary: {
+        total_plants: plants.length,
+        active_plants: (plants as any[]).filter(p => p.status === 'ativa').length,
+        dead_plants: (plants as any[]).filter(p => p.status === 'morta').length,
+        germination_failures: (plants as any[]).filter(p => p.status === 'falha_germinacao').length,
+      }
+    });
+  } catch (error: any) {
+    console.error('Erro ao buscar métricas da genética:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar métricas da genética' });
+  }
+});
+
 // ===== ROTAS DE REGISTROS DIÁRIOS =====
 
 // Listar todos os registros
