@@ -17,6 +17,7 @@ import { Plant } from '../types';
 import { formatDateLocal } from '../utils/date.utils';
 import PlantCard from '../components/PlantCard';
 import SensorDashboard from '../components/SensorDashboard';
+import PlantRanking from '../components/PlantRanking';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -135,6 +136,12 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.phaseLabel}>Floração</Text>
           </View>
         </View>
+
+        {/* Ranking de Evolução */}
+        <PlantRanking 
+          plants={plants}
+          onPlantPress={(id) => navigation.navigate('PlantDetail', { id })}
+        />
 
         <Text style={styles.sectionTitle}>📊 Dados dos Sensores</Text>
         <SensorDashboard />

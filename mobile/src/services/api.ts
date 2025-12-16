@@ -84,6 +84,11 @@ export const recordsAPI = {
   delete: async (plantId: number, recordId: number) => {
     await api.delete(`/records/${recordId}`);
   },
+
+  getAll: async () => {
+    const { data } = await api.get<DailyRecord[]>('/records');
+    return data;
+  },
 };
 
 // Statistics API

@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { format, differenceInDays, addDays } from 'date-fns';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import Svg, { Line, Circle, G, Text as SvgText, Rect } from 'react-native-svg';
+import { format, differenceInDays } from 'date-fns';
 import { parseDate } from '../utils/date.utils';
 import { DailyRecord, Plant } from '../types';
 
@@ -9,352 +10,390 @@ interface GrowthChartProps {
   plant: Plant;
 }
 
-interface DataPoint {
+interface TooltipData {
+  index: number;
+  x: number;
+  y: number;
+  date: string;
   day: number;
-  date: Date;
-  formattedDate: string;
-  plant_size?: number;
-  leaf_count?: number;
-  branch_count?: number;
+  size: number | null;
+  leaves: number | null;
+  branches: number | null;
 }
 
-interface PhaseMarker {
-  day: number;
-  phase: string;
-  label: string;
-  color: string;
-}
+const CHART_HEIGHT = 200;
+const POINT_SPACING = 60;
+const PADDING_LEFT = 40;
+const PADDING_TOP = 20;
+const PADDING_BOTTOM = 40;
+
+const COLORS = {
+  size: '#4CAF50',
+  leaves: '#2196F3',
+  branches: '#FF9800',
+};
 
 export default function GrowthChart({ records, plant }: GrowthChartProps) {
-  const sortedRecords = useMemo(() => 
-    [...records].sort((a, b) => 
+  const [selectedPoint, setSelectedPoint] = useState<TooltipData | null>(null);
+  const dataPoints = useMemo(() => {
+    if (records.length === 0 || !plant.germination_date) return [];
+    
+    const germinationDate = parseDate(plant.germination_date);
+    
+    const sortedRecords = [...records].sort((a, b) => 
       parseDate(a.record_date).getTime() - parseDate(b.record_date).getTime()
-    ),
-    [records]
-  );
-
-  // Calcular dados desde a germinação
-  const chartData = useMemo(() => {
-    if (sortedRecords.length === 0 || !plant.germination_date) return [];
-
-    const germinationDate = parseDate(plant.germination_date);
-    const lastRecordDate = parseDate(sortedRecords[sortedRecords.length - 1].record_date);
-    const totalDays = differenceInDays(lastRecordDate, germinationDate);
-
-    const data: DataPoint[] = [];
-    let lastValues = {
-      plant_size: undefined as number | undefined,
-      leaf_count: undefined as number | undefined,
-      branch_count: undefined as number | undefined,
-    };
-
-    for (let day = 0; day <= totalDays; day++) {
-      const currentDate = addDays(germinationDate, day);
-      const dateStr = format(currentDate, 'yyyy-MM-dd');
-
-      const dayData = sortedRecords.find(r => r.record_date.split('T')[0] === dateStr);
-      
-      if (dayData) {
-        if (dayData.plant_size !== undefined) lastValues.plant_size = dayData.plant_size;
-        if (dayData.leaf_count !== undefined) lastValues.leaf_count = dayData.leaf_count;
-        if (dayData.branch_count !== undefined) lastValues.branch_count = dayData.branch_count;
-      }
-
-      data.push({
-        day,
-        date: currentDate,
-        formattedDate: format(currentDate, 'dd/MM'),
-        ...lastValues
+    );
+    
+    return sortedRecords
+      .filter(record => 
+        (record.plant_size !== undefined && record.plant_size !== null) ||
+        (record.leaf_count !== undefined && record.leaf_count !== null) ||
+        (record.branch_count !== undefined && record.branch_count !== null)
+      )
+      .map(record => {
+        const recordDate = parseDate(record.record_date);
+        const day = differenceInDays(recordDate, germinationDate);
+        return {
+          day,
+          date: format(recordDate, 'dd/MM'),
+          size: record.plant_size ?? null,
+          leaves: record.leaf_count ?? null,
+          branches: record.branch_count ?? null,
+        };
       });
-    }
+  }, [records, plant.germination_date]);
 
-    return data;
-  }, [sortedRecords, plant.germination_date]);
-
-  // Calcular marcadores de fase
-  const phaseMarkers = useMemo(() => {
-    if (!plant.germination_date) return [];
+  const maxValues = useMemo(() => {
+    const sizes = dataPoints.filter(d => d.size !== null).map(d => d.size as number);
+    const leaves = dataPoints.filter(d => d.leaves !== null).map(d => d.leaves as number);
+    const branches = dataPoints.filter(d => d.branches !== null).map(d => d.branches as number);
     
-    const markers: PhaseMarker[] = [];
-    const germinationDate = parseDate(plant.germination_date);
-    const today = new Date();
-    
-    const getPhaseColor = (phase: string) => {
-      switch(phase) {
-        case 'germinacao': return '#86efac';
-        case 'muda': return '#4ade80';
-        case 'vegetacao': return '#22c55e';
-        case 'floracao': return '#ec4899';
-        default: return '#4CAF50';
-      }
+    return {
+      size: sizes.length > 0 ? Math.max(...sizes) * 1.1 : 0, // +10% margin
+      leaves: leaves.length > 0 ? Math.max(...leaves) * 1.1 : 0,
+      branches: branches.length > 0 ? Math.max(...branches) * 1.1 : 0,
     };
-    
-    // Marcador de germinação
-    const germinationHistory = plant.phase_history?.find(h => h.phase === 'germinacao');
-    let germinationDays = 0;
-    if (germinationHistory) {
-      germinationDays = germinationHistory.duration_days || 0;
-      if (!germinationHistory.ended_at) {
-        germinationDays = differenceInDays(today, parseDate(germinationHistory.started_at));
-      }
-    }
-    
-    markers.push({
-      day: 0,
-      phase: 'germinacao',
-      label: `🌱 Germinação (${germinationDays}d)`,
-      color: getPhaseColor('germinacao')
-    });
+  }, [dataPoints]);
 
-    // Adicionar marcadores baseados no histórico de fases
-    if (plant.phase_history && plant.phase_history.length > 0) {
-      plant.phase_history.forEach(history => {
-        const phaseStartDate = parseDate(history.started_at);
-        const daysSinceGermination = differenceInDays(phaseStartDate, germinationDate);
-        
-        if (history.phase !== 'germinacao' && daysSinceGermination >= 0) {
-          let phaseDuration = history.duration_days || 0;
-          if (!history.ended_at) {
-            phaseDuration = differenceInDays(today, phaseStartDate);
-          }
-          
-          let label = '';
-          switch(history.phase) {
-            case 'muda':
-              label = `🌿 Muda (${phaseDuration}d)`;
-              break;
-            case 'vegetacao':
-              label = `🌱 Vegetação (${phaseDuration}d)`;
-              break;
-            case 'floracao':
-              label = `🌸 Floração (${phaseDuration}d)`;
-              break;
-          }
-          
-          markers.push({
-            day: daysSinceGermination,
-            phase: history.phase,
-            label,
-            color: getPhaseColor(history.phase)
-          });
-        }
-      });
-    }
-    
-    return markers.sort((a, b) => a.day - b.day);
-  }, [plant.germination_date, plant.phase_history]);
+  const hasData = dataPoints.length > 0 && (maxValues.size > 0 || maxValues.leaves > 0 || maxValues.branches > 0);
 
-  const hasPlantData = useMemo(() => 
-    chartData.some(d => d.plant_size),
-    [chartData]
-  );
-
-  if (!hasPlantData || chartData.length === 0) {
+  if (!hasData) {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>📊 Sem dados suficientes para gerar gráfico</Text>
+        <Text style={styles.emptySubtext}>Adicione registros com tamanho, folhas ou ramos</Text>
       </View>
     );
   }
 
-  const maxDay = Math.max(...chartData.map(d => d.day));
-  const dataWithSize = chartData.filter(d => d.plant_size !== undefined);
-  const dataWithLeaves = chartData.filter(d => d.leaf_count !== undefined);
-  const dataWithBranches = chartData.filter(d => d.branch_count !== undefined);
-  
-  const maxSize = dataWithSize.length > 0 ? Math.max(...dataWithSize.map(d => d.plant_size!)) : 0;
-  const maxLeaves = dataWithLeaves.length > 0 ? Math.max(...dataWithLeaves.map(d => d.leaf_count!)) : 0;
-  const maxBranches = dataWithBranches.length > 0 ? Math.max(...dataWithBranches.map(d => d.branch_count!)) : 0;
+  const lastValues = useMemo(() => {
+    const lastWithSize = [...dataPoints].reverse().find(d => d.size !== null);
+    const lastWithLeaves = [...dataPoints].reverse().find(d => d.leaves !== null);
+    const lastWithBranches = [...dataPoints].reverse().find(d => d.branches !== null);
+    return {
+      size: lastWithSize?.size ?? null,
+      leaves: lastWithLeaves?.leaves ?? null,
+      branches: lastWithBranches?.branches ?? null,
+      totalDays: dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].day : 0,
+    };
+  }, [dataPoints]);
 
-  const CHART_WIDTH = 800;
-  const CHART_HEIGHT = 300;
+  const chartWidth = Math.max(dataPoints.length * POINT_SPACING + PADDING_LEFT + 20, 300);
+  const svgHeight = CHART_HEIGHT + PADDING_TOP + PADDING_BOTTOM;
 
-  // Selecionar 5 datas para exibir no eixo X
-  const xAxisDates = useMemo(() => {
-    if (chartData.length === 0) return [];
-    const step = Math.floor(chartData.length / 4);
-    return [
-      chartData[0],
-      chartData[Math.min(step, chartData.length - 1)],
-      chartData[Math.min(step * 2, chartData.length - 1)],
-      chartData[Math.min(step * 3, chartData.length - 1)],
-      chartData[chartData.length - 1],
-    ];
-  }, [chartData]);
+  // Função para calcular a posição Y (0 = bottom, max = top)
+  const getY = (value: number | null, maxValue: number): number => {
+    if (value === null || maxValue === 0) return svgHeight - PADDING_BOTTOM;
+    const ratio = value / maxValue;
+    return PADDING_TOP + CHART_HEIGHT * (1 - ratio);
+  };
+
+  // Função para calcular a posição X
+  const getX = (index: number): number => {
+    return PADDING_LEFT + index * POINT_SPACING;
+  };
+
+  // Gerar pontos para cada série
+  const sizePoints = dataPoints.filter(d => d.size !== null);
+  const leavesPoints = dataPoints.filter(d => d.leaves !== null);
+  const branchesPoints = dataPoints.filter(d => d.branches !== null);
+
+  const handlePointPress = (index: number) => {
+    const point = dataPoints[index];
+    if (selectedPoint?.index === index) {
+      setSelectedPoint(null);
+    } else {
+      setSelectedPoint({
+        index,
+        x: getX(index),
+        y: PADDING_TOP,
+        date: point.date,
+        day: point.day,
+        size: point.size,
+        leaves: point.leaves,
+        branches: point.branches,
+      });
+    }
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>📈 Evolução da Planta</Text>
       
+      {/* Tooltip fixo no topo */}
+      {selectedPoint && (
+        <View style={styles.tooltip}>
+          <View style={styles.tooltipHeader}>
+            <Text style={styles.tooltipDate}>📅 {selectedPoint.date}</Text>
+            <Text style={styles.tooltipDay}>Dia {selectedPoint.day}</Text>
+            <Pressable onPress={() => setSelectedPoint(null)} style={styles.tooltipClose}>
+              <Text style={styles.tooltipCloseText}>✕</Text>
+            </Pressable>
+          </View>
+          <View style={styles.tooltipValues}>
+            {selectedPoint.size !== null && (
+              <View style={styles.tooltipValue}>
+                <View style={[styles.tooltipDot, { backgroundColor: COLORS.size }]} />
+                <Text style={styles.tooltipText}>Tamanho: <Text style={{ fontWeight: 'bold', color: COLORS.size }}>{selectedPoint.size} cm</Text></Text>
+              </View>
+            )}
+            {selectedPoint.leaves !== null && (
+              <View style={styles.tooltipValue}>
+                <View style={[styles.tooltipDot, { backgroundColor: COLORS.leaves }]} />
+                <Text style={styles.tooltipText}>Folhas: <Text style={{ fontWeight: 'bold', color: COLORS.leaves }}>{selectedPoint.leaves}</Text></Text>
+              </View>
+            )}
+            {selectedPoint.branches !== null && (
+              <View style={styles.tooltipValue}>
+                <View style={[styles.tooltipDot, { backgroundColor: COLORS.branches }]} />
+                <Text style={styles.tooltipText}>Ramos: <Text style={{ fontWeight: 'bold', color: COLORS.branches }}>{selectedPoint.branches}</Text></Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+      
       <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-        <View style={styles.chartWrapper}>
-          {/* Fundo das fases */}
-          <View style={styles.phasesContainer}>
-            {phaseMarkers.map((marker, index) => {
-              const nextMarker = phaseMarkers[index + 1];
-              const startPercent = (marker.day / maxDay) * 100;
-              const endPercent = nextMarker ? (nextMarker.day / maxDay) * 100 : 100;
-              const widthPercent = endPercent - startPercent;
-              
-              return (
-                <View
-                  key={index}
-                  style={[
-                    styles.phaseBar,
-                    {
-                      left: `${startPercent}%`,
-                      width: `${widthPercent}%`,
-                      backgroundColor: marker.color,
-                    }
-                  ]}
-                />
-              );
-            })}
-          </View>
+        <View style={{ position: 'relative' }}>
+          <Svg width={chartWidth} height={svgHeight}>
+            {/* Grid lines horizontais */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+              <Line
+                key={`grid-${i}`}
+                x1={PADDING_LEFT - 10}
+                y1={PADDING_TOP + CHART_HEIGHT * (1 - ratio)}
+                x2={chartWidth - 10}
+                y2={PADDING_TOP + CHART_HEIGHT * (1 - ratio)}
+                stroke="#e0e0e0"
+                strokeWidth={1}
+              />
+            ))}
 
-          {/* Gráfico com barras verticais para cada métrica */}
-          <View style={styles.barsContainer}>
-            {/* Barras de tamanho */}
-            {dataWithSize.map((point, index) => {
-              const heightPercent = maxSize > 0 ? (point.plant_size! / maxSize) * 90 : 0;
-              const leftPercent = (point.day / maxDay) * 100;
-              
-              return (
-                <View
-                  key={`size-bar-${index}`}
-                  style={[
-                    styles.bar,
-                    {
-                      height: `${heightPercent}%`,
-                      left: `${leftPercent}%`,
-                      backgroundColor: '#4CAF50',
-                      width: 6,
-                    }
-                  ]}
-                >
-                  <View style={[styles.barDot, { backgroundColor: '#4CAF50' }]} />
-                </View>
-              );
-            })}
+            {/* Linha de Tamanho (verde) */}
+            {sizePoints.length > 1 && (
+              <G>
+                {sizePoints.map((point, i) => {
+                  const currentIndex = dataPoints.indexOf(point);
+                  if (i === 0) return null;
+                  const prevPoint = sizePoints[i - 1];
+                  const prevIndex = dataPoints.indexOf(prevPoint);
+                  return (
+                    <Line
+                      key={`size-line-${i}`}
+                      x1={getX(prevIndex)}
+                      y1={getY(prevPoint.size, maxValues.size)}
+                      x2={getX(currentIndex)}
+                      y2={getY(point.size, maxValues.size)}
+                      stroke={COLORS.size}
+                      strokeWidth={3}
+                    />
+                  );
+                })}
+              </G>
+            )}
 
-            {/* Barras de folhas */}
-            {dataWithLeaves.map((point, index) => {
-              const heightPercent = maxLeaves > 0 ? (point.leaf_count! / maxLeaves) * 90 : 0;
-              const leftPercent = (point.day / maxDay) * 100;
-              const leftPixels = (leftPercent / 100) * 800 + 8;
-              
-              return (
-                <View
-                  key={`leaf-bar-${index}`}
-                  style={[
-                    styles.bar,
-                    {
-                      height: `${heightPercent}%`,
-                      left: leftPixels,
-                      backgroundColor: '#2196F3',
-                      opacity: 0.8,
-                      width: 6,
-                    }
-                  ]}
-                >
-                  <View style={[styles.barDot, { backgroundColor: '#2196F3' }]} />
-                </View>
-              );
-            })}
+            {/* Linha de Folhas (azul) */}
+            {leavesPoints.length > 1 && (
+              <G>
+                {leavesPoints.map((point, i) => {
+                  const currentIndex = dataPoints.indexOf(point);
+                  if (i === 0) return null;
+                  const prevPoint = leavesPoints[i - 1];
+                  const prevIndex = dataPoints.indexOf(prevPoint);
+                  return (
+                    <Line
+                      key={`leaves-line-${i}`}
+                      x1={getX(prevIndex)}
+                      y1={getY(prevPoint.leaves, maxValues.leaves)}
+                      x2={getX(currentIndex)}
+                      y2={getY(point.leaves, maxValues.leaves)}
+                      stroke={COLORS.leaves}
+                      strokeWidth={3}
+                    />
+                  );
+                })}
+              </G>
+            )}
 
-            {/* Barras de ramos */}
-            {dataWithBranches.map((point, index) => {
-              const heightPercent = maxBranches > 0 ? (point.branch_count! / maxBranches) * 90 : 0;
-              const leftPercent = (point.day / maxDay) * 100;
-              const leftPixels = (leftPercent / 100) * 800 + 16;
-              
-              return (
-                <View
-                  key={`branch-bar-${index}`}
-                  style={[
-                    styles.bar,
-                    {
-                      height: `${heightPercent}%`,
-                      left: leftPixels,
-                      backgroundColor: '#FF9800',
-                      opacity: 0.8,
-                      width: 6,
-                    }
-                  ]}
+            {/* Linha de Ramos (laranja) */}
+            {branchesPoints.length > 1 && (
+              <G>
+                {branchesPoints.map((point, i) => {
+                  const currentIndex = dataPoints.indexOf(point);
+                  if (i === 0) return null;
+                  const prevPoint = branchesPoints[i - 1];
+                  const prevIndex = dataPoints.indexOf(prevPoint);
+                  return (
+                    <Line
+                      key={`branches-line-${i}`}
+                      x1={getX(prevIndex)}
+                      y1={getY(prevPoint.branches, maxValues.branches)}
+                      x2={getX(currentIndex)}
+                      y2={getY(point.branches, maxValues.branches)}
+                      stroke={COLORS.branches}
+                      strokeWidth={3}
+                    />
+                  );
+                })}
+              </G>
+            )}
+
+            {/* Círculos nos pontos de dados */}
+            {dataPoints.map((point, index) => (
+              <G key={`points-${index}`}>
+                {point.size !== null && (
+                  <Circle
+                    cx={getX(index)}
+                    cy={getY(point.size, maxValues.size)}
+                    r={selectedPoint?.index === index ? 9 : 6}
+                    fill={COLORS.size}
+                    stroke={selectedPoint?.index === index ? '#fff' : 'none'}
+                    strokeWidth={2}
+                  />
+                )}
+                {point.leaves !== null && (
+                  <Circle
+                    cx={getX(index)}
+                    cy={getY(point.leaves, maxValues.leaves)}
+                    r={selectedPoint?.index === index ? 9 : 6}
+                    fill={COLORS.leaves}
+                    stroke={selectedPoint?.index === index ? '#fff' : 'none'}
+                    strokeWidth={2}
+                  />
+                )}
+                {point.branches !== null && (
+                  <Circle
+                    cx={getX(index)}
+                    cy={getY(point.branches, maxValues.branches)}
+                    r={selectedPoint?.index === index ? 9 : 6}
+                    fill={COLORS.branches}
+                    stroke={selectedPoint?.index === index ? '#fff' : 'none'}
+                    strokeWidth={2}
+                  />
+                )}
+              </G>
+            ))}
+
+            {/* Linha vertical indicando ponto selecionado */}
+            {selectedPoint && (
+              <Line
+                x1={selectedPoint.x}
+                y1={PADDING_TOP}
+                x2={selectedPoint.x}
+                y2={svgHeight - PADDING_BOTTOM}
+                stroke="#666"
+                strokeWidth={1}
+                strokeDasharray="4,4"
+              />
+            )}
+
+            {/* Labels de data no eixo X */}
+            {dataPoints.map((point, index) => (
+              <G key={`label-${index}`}>
+                <SvgText
+                  x={getX(index)}
+                  y={svgHeight - 18}
+                  fontSize={10}
+                  fill={selectedPoint?.index === index ? '#333' : '#666'}
+                  fontWeight={selectedPoint?.index === index ? 'bold' : 'normal'}
+                  textAnchor="middle"
                 >
-                  <View style={[styles.barDot, { backgroundColor: '#FF9800' }]} />
-                </View>
-              );
-            })}
-          </View>
+                  {point.date}
+                </SvgText>
+                <SvgText
+                  x={getX(index)}
+                  y={svgHeight - 5}
+                  fontSize={9}
+                  fill={selectedPoint?.index === index ? '#666' : '#999'}
+                  textAnchor="middle"
+                >
+                  D{point.day}
+                </SvgText>
+              </G>
+            ))}
+          </Svg>
+          
+          {/* Áreas de toque invisíveis para cada ponto */}
+          {dataPoints.map((point, index) => (
+            <TouchableOpacity
+              key={`touch-${index}`}
+              style={{
+                position: 'absolute',
+                left: getX(index) - 20,
+                top: PADDING_TOP - 10,
+                width: 40,
+                height: CHART_HEIGHT + 20,
+              }}
+              onPress={() => handlePointPress(index)}
+              activeOpacity={0.7}
+            />
+          ))}
         </View>
       </ScrollView>
 
-      {/* Eixo X com datas */}
-      <View style={styles.xAxis}>
-        {xAxisDates.map((datePoint, index) => (
-          <Text key={index} style={styles.axisLabel}>
-            {datePoint.formattedDate}
-          </Text>
-        ))}
-      </View>
-      <Text style={styles.xAxisTitle}>Data dos Registros</Text>
-
-      {/* Legenda dos dados */}
-      <View style={styles.dataLegend}>
-        {dataWithSize.length > 0 && (
+      <View style={styles.legend}>
+        {maxValues.size > 0 && (
           <View style={styles.legendItem}>
-            <View style={[styles.legendLine, { backgroundColor: '#4CAF50' }]} />
+            <View style={[styles.legendDot, { backgroundColor: COLORS.size }]} />
             <Text style={styles.legendText}>Tamanho (cm)</Text>
           </View>
         )}
-        {dataWithLeaves.length > 0 && (
+        {maxValues.leaves > 0 && (
           <View style={styles.legendItem}>
-            <View style={[styles.legendLine, { backgroundColor: '#2196F3' }]} />
+            <View style={[styles.legendDot, { backgroundColor: COLORS.leaves }]} />
             <Text style={styles.legendText}>Folhas</Text>
           </View>
         )}
-        {dataWithBranches.length > 0 && (
+        {maxValues.branches > 0 && (
           <View style={styles.legendItem}>
-            <View style={[styles.legendLine, { backgroundColor: '#FF9800' }]} />
+            <View style={[styles.legendDot, { backgroundColor: COLORS.branches }]} />
             <Text style={styles.legendText}>Ramos</Text>
           </View>
         )}
       </View>
 
-      {/* Legenda das fases */}
-      <View style={styles.legend}>
-        {phaseMarkers.map((marker, index) => (
-          <View key={index} style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: marker.color }]} />
-            <Text style={styles.legendText}>{marker.label}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Estatísticas */}
       <View style={styles.stats}>
-        {dataWithSize.length > 0 && (
+        {lastValues.size !== null && (
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Tamanho</Text>
-            <Text style={styles.statValue}>{dataWithSize[dataWithSize.length - 1]?.plant_size?.toFixed(1)} cm</Text>
+            <Text style={[styles.statValue, { color: COLORS.size }]}>{lastValues.size} cm</Text>
           </View>
         )}
-        {dataWithLeaves.length > 0 && (
+        {lastValues.leaves !== null && (
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Folhas</Text>
-            <Text style={styles.statValue}>{dataWithLeaves[dataWithLeaves.length - 1]?.leaf_count}</Text>
+            <Text style={[styles.statValue, { color: COLORS.leaves }]}>{lastValues.leaves}</Text>
           </View>
         )}
-        {dataWithBranches.length > 0 && (
+        {lastValues.branches !== null && (
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Ramos</Text>
-            <Text style={styles.statValue}>{dataWithBranches[dataWithBranches.length - 1]?.branch_count}</Text>
+            <Text style={[styles.statValue, { color: COLORS.branches }]}>{lastValues.branches}</Text>
           </View>
         )}
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Dias Total</Text>
-          <Text style={styles.statValue}>{maxDay} dias</Text>
+          <Text style={styles.statLabel}>Dias</Text>
+          <Text style={[styles.statValue, { color: '#666' }]}>{lastValues.totalDays}</Text>
         </View>
       </View>
     </View>
@@ -367,7 +406,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -380,81 +419,68 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
   },
-  chartWrapper: {
-    width: 800,
-    height: 300,
-    position: 'relative',
-    marginBottom: 8,
-  },
-  phasesContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    flexDirection: 'row',
-  },
-  phaseBar: {
-    position: 'absolute',
-    height: '100%',
-    opacity: 0.15,
-  },
-  barsContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    bottom: 0,
-  },
-  bar: {
-    position: 'absolute',
-    bottom: 0,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-  },
-  barDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    position: 'absolute',
-    top: -4,
-    left: -1,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  xAxis: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 4,
-  },
-  axisLabel: {
-    fontSize: 10,
-    color: '#666',
-  },
-  xAxisTitle: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 16,
-  },
-  dataLegend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  tooltip: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    padding: 12,
     marginBottom: 12,
-    paddingBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  tooltipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  legendLine: {
-    width: 24,
-    height: 3,
-    borderRadius: 2,
+  tooltipDate: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  tooltipDay: {
+    fontSize: 12,
+    color: '#666',
+    backgroundColor: '#e8e8e8',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  tooltipClose: {
+    padding: 4,
+  },
+  tooltipCloseText: {
+    fontSize: 16,
+    color: '#999',
+    fontWeight: 'bold',
+  },
+  tooltipValues: {
+    gap: 6,
+  },
+  tooltipValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  tooltipDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  tooltipText: {
+    fontSize: 13,
+    color: '#444',
   },
   legend: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-    paddingTop: 16,
+    gap: 16,
+    marginTop: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
@@ -463,10 +489,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   legendText: {
     fontSize: 12,
@@ -475,6 +501,7 @@ const styles = StyleSheet.create({
   stats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
@@ -488,16 +515,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#4CAF50',
   },
   emptyContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginVertical: 8,
     padding: 32,
+    borderRadius: 12,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#999',
   },
 });
