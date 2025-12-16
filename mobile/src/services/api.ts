@@ -97,7 +97,21 @@ export const statisticsAPI = {
     const { data } = await api.get<Statistics>('/statistics');
     return data;
   },
+  
+  getPhaseStats: async () => {
+    const { data } = await api.get<PhaseStatistics[]>('/statistics/phases');
+    return data;
+  },
 };
+
+// Phase Statistics Type
+export interface PhaseStatistics {
+  phase: string;
+  total_transitions: number;
+  avg_days: number | null;
+  min_days: number | null;
+  max_days: number | null;
+}
 
 // Sensors API
 export const sensorsAPI = {

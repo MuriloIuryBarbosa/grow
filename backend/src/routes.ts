@@ -152,6 +152,35 @@ router.patch('/plants/:id/status', (req: Request, res: Response) => {
   }
 });
 
+// Atualizar fase da planta
+router.put('/plants/:id/phase', (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const { phase } = req.body;
+
+    const validPhases = ['germinacao', 'muda', 'vegetacao', 'floracao'];
+    if (!validPhases.includes(phase)) {
+      return res.status(400).json({ error: 'Fase inválida. Use: germinacao, muda, vegetacao ou floracao' });
+    }
+
+    const plant = PlantModel.findById(id);
+    if (!plant) {
+      return res.status(404).json({ error: 'Planta não encontrada' });
+    }
+
+    const success = PlantModel.update(id, { current_phase: phase });
+    if (!success) {
+      return res.status(500).json({ error: 'Erro ao atualizar fase' });
+    }
+
+    const updated = PlantModel.findById(id);
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Erro ao atualizar fase:', error);
+    res.status(500).json({ error: error.message || 'Erro ao atualizar fase' });
+  }
+});
+
 // Deletar planta
 router.delete('/plants/:id', (req: Request, res: Response) => {
   try {
@@ -182,6 +211,48 @@ router.get('/plants/phase/:phase', (req: Request, res: Response) => {
     res.json(plants);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar plantas por fase' });
+  }
+});
+
+// Estatísticas de evolução de fases
+router.get('/statistics/phases', (req: Request, res: Response) => {
+  try {
+    // Buscar dados do phase_history
+    const phaseStats = db.prepare(`
+      SELECT 
+        phase,
+        COUNT(*) as total_transitions,
+        AVG(duration_days) as avg_days,
+        MIN(duration_days) as min_days,
+        MAX(duration_days) as max_days
+      FROM phase_history 
+      WHERE duration_days IS NOT NULL AND duration_days > 0
+      GROUP BY phase
+    `).all() as Array<{
+      phase: string;
+      total_transitions: number;
+      avg_days: number | null;
+      min_days: number | null;
+      max_days: number | null;
+    }>;
+
+    // Estruturar resposta com todas as fases
+    const phases = ['germinacao', 'muda', 'vegetacao', 'floracao'];
+    const result = phases.map(phase => {
+      const stat = phaseStats.find(s => s.phase === phase);
+      return {
+        phase,
+        total_transitions: stat?.total_transitions || 0,
+        avg_days: stat?.avg_days ? Math.round(stat.avg_days * 10) / 10 : null,
+        min_days: stat?.min_days || null,
+        max_days: stat?.max_days || null,
+      };
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Erro ao buscar estatísticas de fases:', error);
+    res.status(500).json({ error: error.message || 'Erro ao buscar estatísticas de fases' });
   }
 });
 

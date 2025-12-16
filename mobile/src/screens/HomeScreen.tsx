@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { formatDateLocal } from '../utils/date.utils';
 import PlantCard from '../components/PlantCard';
 import SensorDashboard from '../components/SensorDashboard';
 import PlantRanking from '../components/PlantRanking';
+import { statisticsAPI, PhaseStatistics } from '../services/api';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -42,10 +43,24 @@ export default function HomeScreen({ navigation }: Props) {
   const { plants, loading, error, refetch } = usePlants();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'plants' | 'dead'>('dashboard');
+  const [phaseStats, setPhaseStats] = useState<PhaseStatistics[]>([]);
+
+  useEffect(() => {
+    loadPhaseStats();
+  }, []);
+
+  const loadPhaseStats = async () => {
+    try {
+      const stats = await statisticsAPI.getPhaseStats();
+      setPhaseStats(stats);
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas de fases:', error);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    await Promise.all([refetch(), loadPhaseStats()]);
     setRefreshing(false);
   };
 
@@ -64,6 +79,30 @@ export default function HomeScreen({ navigation }: Props) {
       mortas: deadPlants.length,
     };
     return stats;
+  };
+
+  const getPhaseStatData = (phase: string) => {
+    const stat = phaseStats.find(s => s.phase === phase);
+    return {
+      avg: stat?.avg_days ?? '-',
+      min: stat?.min_days ?? '-',
+      max: stat?.max_days ?? '-',
+    };
+  };
+
+  const renderPhaseEvolutionRow = (phase: string, label: string, color: string) => {
+    const data = getPhaseStatData(phase);
+    return (
+      <View style={styles.phaseEvolutionRow}>
+        <View style={[styles.phaseEvolutionCol1, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+          <View style={[styles.phaseEvolutionDot, { backgroundColor: color }]} />
+          <Text style={styles.phaseEvolutionLabel}>{label}</Text>
+        </View>
+        <Text style={[styles.phaseEvolutionValue, styles.phaseEvolutionCol2]}>{data.avg}</Text>
+        <Text style={[styles.phaseEvolutionValue, styles.phaseEvolutionCol3, { color: '#4CAF50' }]}>{data.min}</Text>
+        <Text style={[styles.phaseEvolutionValue, styles.phaseEvolutionCol4, { color: '#f44336' }]}>{data.max}</Text>
+      </View>
+    );
   };
 
   const renderPlantCard = ({ item }: { item: Plant }) => (
@@ -92,49 +131,54 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.statValue}>{stats.ativas}</Text>
             <Text style={styles.statLabel}>Plantas Ativas</Text>
           </View>
-        </View>
-
-        {/* Card de Plantas Mortas */}
-        {stats.mortas > 0 && (
           <TouchableOpacity 
-            style={styles.deadCard}
+            style={styles.deadStatCard}
             onPress={() => setActiveTab('dead')}
           >
-            <View style={styles.deadCardContent}>
-              <Text style={styles.deadCardIcon}>💀</Text>
-              <View style={styles.deadCardInfo}>
-                <Text style={styles.deadCardValue}>{stats.mortas}</Text>
-                <Text style={styles.deadCardLabel}>
-                  {stats.mortas === 1 ? 'Planta Morta' : 'Plantas Mortas'}
-                </Text>
-              </View>
-              <Text style={styles.deadCardArrow}>›</Text>
-            </View>
+            <Text style={styles.deadStatValue}>{stats.mortas}</Text>
+            <Text style={styles.deadStatLabel}>Mortas</Text>
           </TouchableOpacity>
-        )}
+        </View>
 
         <Text style={styles.sectionTitle}>Por Fase (Ativas)</Text>
-        <View style={styles.phaseGrid}>
-          <View style={[styles.phaseCard, styles.germinacaoCard]}>
-            <Text style={styles.phaseEmoji}>🌱</Text>
-            <Text style={styles.phaseValue}>{stats.germinacao}</Text>
-            <Text style={styles.phaseLabel}>Germinação</Text>
+        <View style={styles.phaseGridCompact}>
+          <View style={[styles.phaseCardCompact, styles.germinacaoCardCompact]}>
+            <Text style={styles.phaseValueCompact}>{stats.germinacao}</Text>
+            <Text style={styles.phaseLabelCompact}>Germ.</Text>
           </View>
-          <View style={[styles.phaseCard, styles.mudaCard]}>
-            <Text style={styles.phaseEmoji}>🌿</Text>
-            <Text style={styles.phaseValue}>{stats.muda}</Text>
-            <Text style={styles.phaseLabel}>Muda</Text>
+          <View style={[styles.phaseCardCompact, styles.mudaCardCompact]}>
+            <Text style={styles.phaseValueCompact}>{stats.muda}</Text>
+            <Text style={styles.phaseLabelCompact}>Muda</Text>
           </View>
-          <View style={[styles.phaseCard, styles.vegetacaoCard]}>
-            <Text style={styles.phaseEmoji}>🌳</Text>
-            <Text style={styles.phaseValue}>{stats.vegetacao}</Text>
-            <Text style={styles.phaseLabel}>Vegetação</Text>
+          <View style={[styles.phaseCardCompact, styles.vegetacaoCardCompact]}>
+            <Text style={styles.phaseValueCompact}>{stats.vegetacao}</Text>
+            <Text style={styles.phaseLabelCompact}>Veg.</Text>
           </View>
-          <View style={[styles.phaseCard, styles.floracaoCard]}>
-            <Text style={styles.phaseEmoji}>🌸</Text>
-            <Text style={styles.phaseValue}>{stats.floracao}</Text>
-            <Text style={styles.phaseLabel}>Floração</Text>
+          <View style={[styles.phaseCardCompact, styles.floracaoCardCompact]}>
+            <Text style={styles.phaseValueCompact}>{stats.floracao}</Text>
+            <Text style={styles.phaseLabelCompact}>Flor.</Text>
           </View>
+        </View>
+
+        {/* Estatísticas de Evolução por Fase */}
+        <Text style={styles.sectionTitle}>Evolução das Fases (dias)</Text>
+        <View style={styles.phaseEvolutionContainer}>
+          {/* Header */}
+          <View style={styles.phaseEvolutionHeader}>
+            <Text style={[styles.phaseEvolutionHeaderText, styles.phaseEvolutionCol1]}>Fase</Text>
+            <Text style={[styles.phaseEvolutionHeaderText, styles.phaseEvolutionCol2]}>Média</Text>
+            <Text style={[styles.phaseEvolutionHeaderText, styles.phaseEvolutionCol3]}>Mín</Text>
+            <Text style={[styles.phaseEvolutionHeaderText, styles.phaseEvolutionCol4]}>Máx</Text>
+          </View>
+          
+          {/* Germinação */}
+          {renderPhaseEvolutionRow('germinacao', 'Germinação', '#4CAF50')}
+          {/* Muda */}
+          {renderPhaseEvolutionRow('muda', 'Muda', '#2196F3')}
+          {/* Vegetação */}
+          {renderPhaseEvolutionRow('vegetacao', 'Vegetação', '#9C27B0')}
+          {/* Floração */}
+          {renderPhaseEvolutionRow('floracao', 'Floração', '#FF9800')}
         </View>
 
         {/* Ranking de Evolução */}
@@ -143,7 +187,7 @@ export default function HomeScreen({ navigation }: Props) {
           onPlantPress={(id) => navigation.navigate('PlantDetail', { id })}
         />
 
-        <Text style={styles.sectionTitle}>📊 Dados dos Sensores</Text>
+        <Text style={styles.sectionTitle}>Dados dos Sensores</Text>
         <SensorDashboard />
 
         <View style={styles.actionButtons}>
@@ -151,13 +195,13 @@ export default function HomeScreen({ navigation }: Props) {
             style={styles.geneticButton}
             onPress={() => navigation.navigate('GeneticBank')}
           >
-            <Text style={styles.buttonText}>🧬 Banco Genético</Text>
+            <Text style={styles.buttonText}>Banco Genético</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigation.navigate('Sensors')}
           >
-            <Text style={styles.buttonText}>🌡️ Gerenciar Sensores</Text>
+            <Text style={styles.buttonText}>Gerenciar Sensores</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -351,37 +395,30 @@ const styles = StyleSheet.create({
     marginTop: 5,
     textAlign: 'center',
   },
-  deadCard: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ef4444',
-  },
-  deadCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  deadCardIcon: {
-    fontSize: 32,
-    marginRight: 12,
-  },
-  deadCardInfo: {
+  deadStatCard: {
     flex: 1,
+    backgroundColor: '#fef2f2',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  deadCardValue: {
-    fontSize: 24,
+  deadStatValue: {
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#dc2626',
   },
-  deadCardLabel: {
-    fontSize: 14,
+  deadStatLabel: {
+    fontSize: 12,
     color: '#991b1b',
-  },
-  deadCardArrow: {
-    fontSize: 24,
-    color: '#dc2626',
+    marginTop: 5,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 18,
@@ -389,6 +426,87 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
   },
+  // Cards de fase compactos (4 em linha)
+  phaseGridCompact: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  phaseCardCompact: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderLeftWidth: 3,
+  },
+  germinacaoCardCompact: { backgroundColor: '#e8f5e9', borderLeftColor: '#4CAF50' },
+  mudaCardCompact: { backgroundColor: '#e3f2fd', borderLeftColor: '#2196F3' },
+  vegetacaoCardCompact: { backgroundColor: '#f3e5f5', borderLeftColor: '#9C27B0' },
+  floracaoCardCompact: { backgroundColor: '#fff3e0', borderLeftColor: '#FF9800' },
+  phaseValueCompact: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    color: '#333',
+  },
+  phaseLabelCompact: { 
+    fontSize: 10, 
+    color: '#666', 
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  // Tabela de evolução de fases
+  phaseEvolutionContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  phaseEvolutionHeader: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 4,
+  },
+  phaseEvolutionHeaderText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#666',
+    textAlign: 'center',
+  },
+  phaseEvolutionRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  phaseEvolutionCol1: { flex: 2 },
+  phaseEvolutionCol2: { flex: 1, textAlign: 'center' },
+  phaseEvolutionCol3: { flex: 1, textAlign: 'center' },
+  phaseEvolutionCol4: { flex: 1, textAlign: 'center' },
+  phaseEvolutionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  phaseEvolutionLabel: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '500',
+  },
+  phaseEvolutionValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  // Estilos antigos mantidos para compatibilidade
   phaseGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -405,7 +523,16 @@ const styles = StyleSheet.create({
   mudaCard: { backgroundColor: '#e3f2fd' },
   vegetacaoCard: { backgroundColor: '#f3e5f5' },
   floracaoCard: { backgroundColor: '#fff3e0' },
-  phaseEmoji: { fontSize: 32, marginBottom: 5 },
+  phaseIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  germinacaoIndicator: { backgroundColor: '#4CAF50' },
+  mudaIndicator: { backgroundColor: '#2196F3' },
+  vegetacaoIndicator: { backgroundColor: '#9C27B0' },
+  floracaoIndicator: { backgroundColor: '#FF9800' },
   phaseValue: { fontSize: 24, fontWeight: 'bold', color: '#333' },
   phaseLabel: { fontSize: 12, color: '#666', marginTop: 5 },
   actionButtons: {

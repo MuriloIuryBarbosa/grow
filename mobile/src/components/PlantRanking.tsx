@@ -23,7 +23,7 @@ interface PlantRankingData {
   totalScore: number;
 }
 
-const MEDAL_EMOJIS = ['🥇', '🥈', '🥉'];
+const POSITION_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']; // Ouro, Prata, Bronze
 
 export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps) {
   const [allRecords, setAllRecords] = useState<DailyRecord[]>([]);
@@ -106,7 +106,12 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>🏆 Ranking de Evolução</Text>
+        <View style={styles.titleContainer}>
+          <View style={styles.titleIcon}>
+            <Text style={styles.titleIconText}>R</Text>
+          </View>
+          <Text style={styles.title}>Ranking de Evolução</Text>
+        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#2d5016" />
           <Text style={styles.loadingText}>Calculando ranking...</Text>
@@ -118,7 +123,12 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
   if (rankingData.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>🏆 Ranking de Evolução</Text>
+        <View style={styles.titleContainer}>
+          <View style={styles.titleIcon}>
+            <Text style={styles.titleIconText}>R</Text>
+          </View>
+          <Text style={styles.title}>Ranking de Evolução</Text>
+        </View>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Sem dados de evolução ainda</Text>
           <Text style={styles.emptySubtext}>Adicione registros às suas plantas</Text>
@@ -129,15 +139,20 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🏆 Ranking de Evolução</Text>
+      <View style={styles.titleContainer}>
+        <View style={styles.titleIcon}>
+          <Text style={styles.titleIconText}>R</Text>
+        </View>
+        <Text style={styles.title}>Ranking de Evolução</Text>
+      </View>
       
       {/* Header da tabela */}
       <View style={styles.tableHeader}>
         <Text style={[styles.headerCell, styles.rankCell]}>#</Text>
         <Text style={[styles.headerCell, styles.nameCell]}>Planta</Text>
-        <Text style={[styles.headerCell, styles.valueCell]}>📏 Alt</Text>
-        <Text style={[styles.headerCell, styles.valueCell]}>🌿 Folhas</Text>
-        <Text style={[styles.headerCell, styles.valueCell]}>🌳 Ramos</Text>
+        <Text style={[styles.headerCell, styles.valueCell]}>Alt (cm)</Text>
+        <Text style={[styles.headerCell, styles.valueCell]}>Folhas</Text>
+        <Text style={[styles.headerCell, styles.valueCell]}>Ramos</Text>
       </View>
 
       {/* Linhas do ranking */}
@@ -154,7 +169,9 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
         >
           <View style={[styles.cell, styles.rankCell]}>
             {index < 3 ? (
-              <Text style={styles.medalEmoji}>{MEDAL_EMOJIS[index]}</Text>
+              <View style={[styles.positionBadge, { backgroundColor: POSITION_COLORS[index] }]}>
+                <Text style={styles.positionText}>{index + 1}</Text>
+              </View>
             ) : (
               <Text style={styles.rankNumber}>{index + 1}º</Text>
             )}
@@ -208,11 +225,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  titleIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: '#2d5016',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleIconText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
   },
   loadingContainer: {
     flexDirection: 'row',
@@ -283,8 +318,17 @@ const styles = StyleSheet.create({
   valueCell: {
     width: 55,
   },
-  medalEmoji: {
-    fontSize: 20,
+  positionBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  positionText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   rankNumber: {
     fontSize: 14,
