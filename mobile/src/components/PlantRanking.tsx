@@ -24,6 +24,11 @@ interface PlantRankingData {
 }
 
 const POSITION_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']; // Ouro, Prata, Bronze
+const VALUE_COLORS = {
+  size: '#4CAF50',
+  leaves: '#2196F3',
+  branches: '#FF9800',
+};
 
 export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps) {
   const [allRecords, setAllRecords] = useState<DailyRecord[]>([]);
@@ -106,12 +111,7 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.titleContainer}>
-          <View style={styles.titleIcon}>
-            <Text style={styles.titleIconText}>R</Text>
-          </View>
-          <Text style={styles.title}>Ranking de Evolução</Text>
-        </View>
+        <Text style={styles.sectionTitle}>Ranking de Evolução</Text>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#2d5016" />
           <Text style={styles.loadingText}>Calculando ranking...</Text>
@@ -123,12 +123,7 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
   if (rankingData.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={styles.titleContainer}>
-          <View style={styles.titleIcon}>
-            <Text style={styles.titleIconText}>R</Text>
-          </View>
-          <Text style={styles.title}>Ranking de Evolução</Text>
-        </View>
+        <Text style={styles.sectionTitle}>Ranking de Evolução</Text>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Sem dados de evolução ainda</Text>
           <Text style={styles.emptySubtext}>Adicione registros às suas plantas</Text>
@@ -137,73 +132,68 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
     );
   }
 
+  const renderRankingRow = (data: PlantRankingData, index: number) => {
+    const isTopThree = index < 3;
+    return (
+      <TouchableOpacity
+        key={data.plant.id}
+        style={styles.rankingRow}
+        onPress={() => onPlantPress(data.plant.id!)}
+        activeOpacity={0.7}
+      >
+        {/* Posição */}
+        <View style={[styles.rankingCol1, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+          {isTopThree ? (
+            <View style={[styles.positionBadge, { backgroundColor: POSITION_COLORS[index] }]}>
+              <Text style={styles.positionText}>{index + 1}</Text>
+            </View>
+          ) : (
+            <View style={[styles.rankingDot, { backgroundColor: '#999' }]} />
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rankingLabel} numberOfLines={1}>{data.plant.name}</Text>
+            <Text style={styles.plantCode}>{data.plant.code}</Text>
+          </View>
+        </View>
+        
+        {/* Altura */}
+        <View style={styles.rankingCol2}>
+          <Text style={[styles.rankingValue, { color: VALUE_COLORS.size }]}>
+            {data.maxSize > 0 ? data.maxSize : '-'}
+          </Text>
+        </View>
+        
+        {/* Folhas */}
+        <View style={styles.rankingCol3}>
+          <Text style={[styles.rankingValue, { color: VALUE_COLORS.leaves }]}>
+            {data.maxLeaves > 0 ? data.maxLeaves : '-'}
+          </Text>
+        </View>
+        
+        {/* Ramos */}
+        <View style={styles.rankingCol4}>
+          <Text style={[styles.rankingValue, { color: VALUE_COLORS.branches }]}>
+            {data.maxBranches > 0 ? data.maxBranches : '-'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.titleContainer}>
-        <View style={styles.titleIcon}>
-          <Text style={styles.titleIconText}>R</Text>
-        </View>
-        <Text style={styles.title}>Ranking de Evolução</Text>
-      </View>
+      <Text style={styles.sectionTitle}>Ranking de Evolução</Text>
       
-      {/* Header da tabela */}
-      <View style={styles.tableHeader}>
-        <Text style={[styles.headerCell, styles.rankCell]}>#</Text>
-        <Text style={[styles.headerCell, styles.nameCell]}>Planta</Text>
-        <Text style={[styles.headerCell, styles.valueCell]}>Alt (cm)</Text>
-        <Text style={[styles.headerCell, styles.valueCell]}>Folhas</Text>
-        <Text style={[styles.headerCell, styles.valueCell]}>Ramos</Text>
+      {/* Header da tabela - mesmo estilo da evolução de fases */}
+      <View style={styles.rankingHeader}>
+        <Text style={[styles.rankingHeaderText, styles.rankingCol1]}>Planta</Text>
+        <Text style={[styles.rankingHeaderText, styles.rankingCol2]}>Alt</Text>
+        <Text style={[styles.rankingHeaderText, styles.rankingCol3]}>Folhas</Text>
+        <Text style={[styles.rankingHeaderText, styles.rankingCol4]}>Ramos</Text>
       </View>
 
       {/* Linhas do ranking */}
-      {rankingData.map((data, index) => (
-        <TouchableOpacity
-          key={data.plant.id}
-          style={[
-            styles.tableRow,
-            index < 3 && styles.topThreeRow,
-            index === 0 && styles.firstPlaceRow,
-          ]}
-          onPress={() => onPlantPress(data.plant.id!)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.cell, styles.rankCell]}>
-            {index < 3 ? (
-              <View style={[styles.positionBadge, { backgroundColor: POSITION_COLORS[index] }]}>
-                <Text style={styles.positionText}>{index + 1}</Text>
-              </View>
-            ) : (
-              <Text style={styles.rankNumber}>{index + 1}º</Text>
-            )}
-          </View>
-          
-          <View style={[styles.cell, styles.nameCell]}>
-            <Text style={styles.plantName} numberOfLines={1}>
-              {data.plant.name}
-            </Text>
-            <Text style={styles.plantCode}>{data.plant.code}</Text>
-          </View>
-          
-          <View style={[styles.cell, styles.valueCell]}>
-            <Text style={[styles.value, styles.sizeValue]}>
-              {data.maxSize > 0 ? `${data.maxSize}` : '-'}
-            </Text>
-            {data.maxSize > 0 && <Text style={styles.unit}>cm</Text>}
-          </View>
-          
-          <View style={[styles.cell, styles.valueCell]}>
-            <Text style={[styles.value, styles.leavesValue]}>
-              {data.maxLeaves > 0 ? data.maxLeaves : '-'}
-            </Text>
-          </View>
-          
-          <View style={[styles.cell, styles.valueCell]}>
-            <Text style={[styles.value, styles.branchesValue]}>
-              {data.maxBranches > 0 ? data.maxBranches : '-'}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+      {rankingData.map((data, index) => renderRankingRow(data, index))}
 
       <Text style={styles.footerNote}>
         Toque em uma planta para ver detalhes
@@ -214,47 +204,29 @@ export default function PlantRanking({ plants, onPlantPress }: PlantRankingProps
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     marginHorizontal: 16,
-    marginVertical: 8,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 20,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 10,
-  },
-  titleIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: '#2d5016',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleIconText: {
-    color: '#fff',
+  sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 10,
+    marginLeft: 4,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 20,
     gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   loadingText: {
     fontSize: 14,
@@ -262,7 +234,14 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   emptyText: {
     fontSize: 14,
@@ -273,94 +252,71 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  tableHeader: {
+  // Header - mesmo estilo da tabela de evolução de fases
+  rankingHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
     marginBottom: 4,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingHorizontal: 12,
   },
-  headerCell: {
+  rankingHeaderText: {
     fontSize: 11,
     fontWeight: 'bold',
     color: '#666',
     textAlign: 'center',
   },
-  tableRow: {
+  // Row - mesmo estilo da tabela de evolução de fases
+  rankingRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f5f5f5',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
-  topThreeRow: {
-    backgroundColor: '#fffef0',
+  // Colunas - mesmo estilo da tabela de evolução de fases
+  rankingCol1: { flex: 2 },
+  rankingCol2: { flex: 1, alignItems: 'center' },
+  rankingCol3: { flex: 1, alignItems: 'center' },
+  rankingCol4: { flex: 1, alignItems: 'center' },
+  // Dot - mesmo estilo da tabela de evolução de fases
+  rankingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
-  firstPlaceRow: {
-    backgroundColor: '#fff9e6',
-    borderLeftWidth: 3,
-    borderLeftColor: '#FFD700',
+  rankingLabel: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '500',
   },
-  cell: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  rankingValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-  rankCell: {
-    width: 36,
-  },
-  nameCell: {
-    flex: 1,
-    alignItems: 'flex-start',
-    paddingHorizontal: 8,
-  },
-  valueCell: {
-    width: 55,
-  },
+  // Badge de posição (top 3)
   positionBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   positionText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#fff',
   },
-  rankNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  plantName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
   plantCode: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#999',
     marginTop: 2,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  sizeValue: {
-    color: '#4CAF50',
-  },
-  leavesValue: {
-    color: '#2196F3',
-  },
-  branchesValue: {
-    color: '#FF9800',
-  },
-  unit: {
-    fontSize: 9,
-    color: '#999',
   },
   footerNote: {
     fontSize: 11,
@@ -368,5 +324,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     fontStyle: 'italic',
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

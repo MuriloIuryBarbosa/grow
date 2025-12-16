@@ -217,17 +217,20 @@ router.get('/plants/phase/:phase', (req: Request, res: Response) => {
 // Estatísticas de evolução de fases
 router.get('/statistics/phases', (req: Request, res: Response) => {
   try {
-    // Buscar dados do phase_history
+    // Buscar dados do phase_history (excluindo plantas mortas)
     const phaseStats = db.prepare(`
       SELECT 
-        phase,
+        ph.phase,
         COUNT(*) as total_transitions,
-        AVG(duration_days) as avg_days,
-        MIN(duration_days) as min_days,
-        MAX(duration_days) as max_days
-      FROM phase_history 
-      WHERE duration_days IS NOT NULL AND duration_days > 0
-      GROUP BY phase
+        AVG(ph.duration_days) as avg_days,
+        MIN(ph.duration_days) as min_days,
+        MAX(ph.duration_days) as max_days
+      FROM phase_history ph
+      INNER JOIN plants p ON ph.plant_id = p.id
+      WHERE ph.duration_days IS NOT NULL 
+        AND ph.duration_days > 0
+        AND p.status NOT IN ('morta', 'falha_germinacao')
+      GROUP BY ph.phase
     `).all() as Array<{
       phase: string;
       total_transitions: number;

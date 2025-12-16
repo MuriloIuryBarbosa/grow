@@ -1,13 +1,18 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
-  createDrawerNavigator,
-  DrawerContentScrollView,
-  DrawerItemList,
-  DrawerContentComponentProps,
-} from '@react-navigation/drawer';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Animated,
+  Dimensions,
+  ScrollView,
+  SafeAreaView,
+  Pressable,
+} from 'react-native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -31,8 +36,11 @@ import ActivePlantsScreen from '../screens/ActivePlantsScreen';
 import DeadPlantsScreen from '../screens/DeadPlantsScreen';
 import GeneticMetricsScreen from '../screens/GeneticMetricsScreen';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DRAWER_WIDTH = SCREEN_WIDTH * 0.8;
+
 export type RootStackParamList = {
-  MainDrawer: undefined;
+  Home: undefined;
   PlantDetail: { id: number };
   NewPlant: { seedBatchId?: number; cloneId?: number };
   EditPlant: { id: number };
@@ -40,297 +48,495 @@ export type RootStackParamList = {
   EditRecord: { plantId: number; recordId: number };
   RecordReading: undefined;
   NewSensorReading: { sensor_id: number; sensor_name: string };
+  GeneticBank: undefined;
   GeneticDetail: { id: number };
   NewGenetic: { editId?: number };
   SeedBatchDetail: { id: number };
   NewSeedBatch: { geneticId?: number; editId?: number };
   NewClone: { motherId?: number; motherName?: string; editId?: number };
-};
-
-export type DrawerParamList = {
-  Home: undefined;
   ActivePlants: undefined;
   DeadPlants: undefined;
-  GeneticBank: undefined;
   GeneticMetrics: undefined;
   Sensors: undefined;
-  NewPlant: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Drawer = createDrawerNavigator<DrawerParamList>();
 
-// Componente customizado do conteúdo do Drawer
-function CustomDrawerContent(props: DrawerContentComponentProps) {
+// Drawer Context
+interface DrawerContextType {
+  isOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
+  toggleDrawer: () => void;
+}
+
+const DrawerContext = createContext<DrawerContextType>({
+  isOpen: false,
+  openDrawer: () => {},
+  closeDrawer: () => {},
+  toggleDrawer: () => {},
+});
+
+export const useDrawer = () => useContext(DrawerContext);
+
+// Menu Item Component
+interface MenuItemProps {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  isActive?: boolean;
+}
+
+function MenuItem({ icon, label, onPress, isActive }: MenuItemProps) {
   return (
-    <DrawerContentScrollView {...props} style={styles.drawerContainer}>
-      {/* Header do Drawer */}
+    <TouchableOpacity
+      style={[styles.menuItem, isActive && styles.menuItemActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.menuIcon}>{icon}</Text>
+      <Text style={[styles.menuLabel, isActive && styles.menuLabelActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// Custom Drawer Component
+function CustomDrawer({ navigation, closeDrawer }: { navigation: any; closeDrawer: () => void }) {
+  const navigateTo = (screen: string) => {
+    closeDrawer();
+    navigation.navigate(screen);
+  };
+
+  return (
+    <SafeAreaView style={styles.drawerContainer}>
+      {/* Header */}
       <View style={styles.drawerHeader}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>🌱</Text>
+          <Text style={styles.logoText}>🌱</Text>
         </View>
         <Text style={styles.appTitle}>ShuriGrow</Text>
         <Text style={styles.appSubtitle}>Sistema de Cultivo</Text>
       </View>
 
-      {/* Separador */}
-      <View style={styles.separator} />
+      {/* Menu Items */}
+      <ScrollView style={styles.menuContainer}>
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Principal</Text>
+          <MenuItem
+            icon="📊"
+            label="Dashboard"
+            onPress={() => navigateTo('Home')}
+          />
+          <MenuItem
+            icon="🌿"
+            label="Plantas Ativas"
+            onPress={() => navigateTo('ActivePlants')}
+          />
+          <MenuItem
+            icon="💀"
+            label="Plantas Mortas"
+            onPress={() => navigateTo('DeadPlants')}
+          />
+        </View>
 
-      {/* Items do Menu */}
-      <DrawerItemList {...props} />
+        <View style={styles.menuDivider} />
+
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Genética</Text>
+          <MenuItem
+            icon="🧬"
+            label="Banco Genético"
+            onPress={() => navigateTo('GeneticBank')}
+          />
+          <MenuItem
+            icon="📈"
+            label="Métricas Genéticas"
+            onPress={() => navigateTo('GeneticMetrics')}
+          />
+        </View>
+
+        <View style={styles.menuDivider} />
+
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Monitoramento</Text>
+          <MenuItem
+            icon="🌡️"
+            label="Sensores"
+            onPress={() => navigateTo('Sensors')}
+          />
+        </View>
+
+        <View style={styles.menuDivider} />
+
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Ações</Text>
+          <MenuItem
+            icon="➕"
+            label="Nova Planta"
+            onPress={() => navigateTo('NewPlant')}
+          />
+        </View>
+      </ScrollView>
 
       {/* Footer */}
       <View style={styles.drawerFooter}>
         <Text style={styles.footerText}>v1.0.0</Text>
       </View>
-    </DrawerContentScrollView>
+    </SafeAreaView>
   );
 }
 
-// Drawer Navigator
-function DrawerNavigator() {
+// Drawer Provider Component
+function DrawerProvider({ children }: { children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [slideAnim] = useState(new Animated.Value(-DRAWER_WIDTH));
+
+  const openDrawer = useCallback(() => {
+    setIsOpen(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [slideAnim]);
+
+  const closeDrawer = useCallback(() => {
+    Animated.timing(slideAnim, {
+      toValue: -DRAWER_WIDTH,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsOpen(false);
+    });
+  }, [slideAnim]);
+
+  const toggleDrawer = useCallback(() => {
+    if (isOpen) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  }, [isOpen, openDrawer, closeDrawer]);
+
   return (
-    <Drawer.Navigator
-      id={undefined}
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: '#2d5016',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-        drawerStyle: {
-          backgroundColor: '#fff',
-          width: 280,
-        },
-        drawerActiveTintColor: '#2d5016',
-        drawerInactiveTintColor: '#666',
-        drawerActiveBackgroundColor: '#e8f5e9',
-        drawerLabelStyle: {
-          marginLeft: -16,
-          fontSize: 15,
-          fontWeight: '500',
-        },
-        drawerItemStyle: {
-          borderRadius: 8,
-          marginHorizontal: 8,
-          marginVertical: 2,
-        },
-      }}
-    >
-      <Drawer.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          title: 'Dashboard',
-          drawerLabel: 'Dashboard',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📊</Text>,
-        }}
-      />
-      <Drawer.Screen
-        name="ActivePlants"
-        component={ActivePlantsScreen}
-        options={{
-          title: 'Plantas Ativas',
-          drawerLabel: 'Plantas Ativas',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🌿</Text>,
-        }}
-      />
-      <Drawer.Screen
-        name="DeadPlants"
-        component={DeadPlantsScreen}
-        options={{
-          title: 'Plantas Mortas',
-          drawerLabel: 'Plantas Mortas',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>💀</Text>,
-        }}
-      />
-      <Drawer.Screen
-        name="GeneticBank"
-        component={GeneticBankScreen}
-        options={{
-          title: 'Banco Genético',
-          drawerLabel: 'Banco Genético',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🧬</Text>,
-        }}
-      />
-      <Drawer.Screen
-        name="GeneticMetrics"
-        component={GeneticMetricsScreen}
-        options={{
-          title: 'Métricas Genéticas',
-          drawerLabel: 'Métricas Genéticas',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📈</Text>,
-        }}
-      />
-      <Drawer.Screen
-        name="Sensors"
-        component={SensorsScreen}
-        options={{
-          title: 'Sensores',
-          drawerLabel: 'Sensores',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🌡️</Text>,
-        }}
-      />
-      <Drawer.Screen
-        name="NewPlant"
-        component={NewPlantScreen}
-        options={{
-          title: 'Nova Planta',
-          drawerLabel: 'Nova Planta',
-          drawerIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>➕</Text>,
-        }}
-      />
-    </Drawer.Navigator>
+    <DrawerContext.Provider value={{ isOpen, openDrawer, closeDrawer, toggleDrawer }}>
+      {children}
+      {isOpen && (
+        <Modal
+          visible={isOpen}
+          transparent
+          animationType="none"
+          onRequestClose={closeDrawer}
+        >
+          <View style={styles.modalContainer}>
+            <Pressable style={styles.overlay} onPress={closeDrawer} />
+            <Animated.View
+              style={[
+                styles.drawer,
+                { transform: [{ translateX: slideAnim }] },
+              ]}
+            >
+              <DrawerWrapper closeDrawer={closeDrawer} />
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
+    </DrawerContext.Provider>
+  );
+}
+
+// Wrapper to access navigation inside modal
+function DrawerWrapper({ closeDrawer }: { closeDrawer: () => void }) {
+  const navigation = useNavigation();
+  return <CustomDrawer navigation={navigation} closeDrawer={closeDrawer} />;
+}
+
+// Hamburger Menu Button Component
+export function HamburgerButton() {
+  const { toggleDrawer } = useDrawer();
+
+  return (
+    <TouchableOpacity onPress={toggleDrawer} style={styles.hamburgerButton}>
+      <View style={styles.hamburgerLine} />
+      <View style={styles.hamburgerLine} />
+      <View style={styles.hamburgerLine} />
+    </TouchableOpacity>
   );
 }
 
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        id={undefined}
-        initialRouteName="MainDrawer"
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: '#2d5016',
-          },
-          headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
-        }}
-      >
-        <Stack.Screen
-          name="MainDrawer"
-          component={DrawerNavigator}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="PlantDetail"
-          component={PlantDetailScreen}
-          options={{ title: 'Detalhes da Planta' }}
-        />
-        <Stack.Screen
-          name="NewPlant"
-          component={NewPlantScreen}
-          options={{ title: 'Nova Planta' }}
-        />
-        <Stack.Screen
-          name="EditPlant"
-          component={EditPlantScreen}
-          options={{ title: 'Editar Planta' }}
-        />
-        <Stack.Screen
-          name="NewRecord"
-          component={NewRecordScreen}
-          options={{ title: 'Novo Registro' }}
-        />
-        <Stack.Screen
-          name="EditRecord"
-          component={EditRecordScreen}
-          options={{ title: 'Editar Registro' }}
-        />
-        <Stack.Screen
-          name="RecordReading"
-          component={RecordReadingScreen}
-          options={{ title: 'Registrar Leitura' }}
-        />
-        <Stack.Screen
-          name="NewSensorReading"
-          component={NewSensorReadingScreen}
-          options={{ title: 'Nova Leitura de Sensor' }}
-        />
-        <Stack.Screen
-          name="GeneticDetail"
-          component={GeneticDetailScreen}
-          options={{ title: 'Detalhes da Genética' }}
-        />
-        <Stack.Screen
-          name="NewGenetic"
-          component={NewGeneticScreen}
-          options={({ route }) => ({
-            title: route.params?.editId ? 'Editar Genética' : 'Nova Genética',
-          })}
-        />
-        <Stack.Screen
-          name="SeedBatchDetail"
-          component={SeedBatchDetailScreen}
-          options={{ title: 'Detalhes do Lote' }}
-        />
-        <Stack.Screen
-          name="NewSeedBatch"
-          component={NewSeedBatchScreen}
-          options={({ route }) => ({
-            title: route.params?.editId ? 'Editar Lote' : 'Novo Lote de Sementes',
-          })}
-        />
-        <Stack.Screen
-          name="NewClone"
-          component={NewCloneScreen}
-          options={({ route }) => ({
-            title: route.params?.editId ? 'Editar Clone' : 'Novo Clone',
-          })}
-        />
-      </Stack.Navigator>
+      <DrawerProvider>
+        <Stack.Navigator
+          id={undefined}
+          initialRouteName="Home"
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#2d5016',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+            headerLeft: () => <HamburgerButton />,
+          }}
+        >
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{ title: 'Dashboard' }}
+          />
+          <Stack.Screen
+            name="PlantDetail"
+            component={PlantDetailScreen}
+            options={{ 
+              title: 'Detalhes da Planta',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="NewPlant"
+            component={NewPlantScreen}
+            options={{ 
+              title: 'Nova Planta',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="EditPlant"
+            component={EditPlantScreen}
+            options={{ 
+              title: 'Editar Planta',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="NewRecord"
+            component={NewRecordScreen}
+            options={{ 
+              title: 'Novo Registro',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="EditRecord"
+            component={EditRecordScreen}
+            options={{ 
+              title: 'Editar Registro',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="RecordReading"
+            component={RecordReadingScreen}
+            options={{ 
+              title: 'Leitura de Sensor',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="NewSensorReading"
+            component={NewSensorReadingScreen}
+            options={{ 
+              title: 'Nova Leitura',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="GeneticBank"
+            component={GeneticBankScreen}
+            options={{ title: 'Banco Genético' }}
+          />
+          <Stack.Screen
+            name="GeneticDetail"
+            component={GeneticDetailScreen}
+            options={{ 
+              title: 'Detalhes da Genética',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="NewGenetic"
+            component={NewGeneticScreen}
+            options={{ 
+              title: 'Nova Genética',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="SeedBatchDetail"
+            component={SeedBatchDetailScreen}
+            options={{ 
+              title: 'Detalhes do Lote',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="NewSeedBatch"
+            component={NewSeedBatchScreen}
+            options={{ 
+              title: 'Novo Lote de Sementes',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="NewClone"
+            component={NewCloneScreen}
+            options={{ 
+              title: 'Novo Clone',
+              headerLeft: undefined,
+            }}
+          />
+          <Stack.Screen
+            name="ActivePlants"
+            component={ActivePlantsScreen}
+            options={{ title: 'Plantas Ativas' }}
+          />
+          <Stack.Screen
+            name="DeadPlants"
+            component={DeadPlantsScreen}
+            options={{ title: 'Plantas Mortas' }}
+          />
+          <Stack.Screen
+            name="GeneticMetrics"
+            component={GeneticMetricsScreen}
+            options={{ title: 'Métricas Genéticas' }}
+          />
+          <Stack.Screen
+            name="Sensors"
+            component={SensorsScreen}
+            options={{ title: 'Sensores' }}
+          />
+        </Stack.Navigator>
+      </DrawerProvider>
     </NavigationContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  drawer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
   drawerContainer: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   drawerHeader: {
-    padding: 20,
-    paddingTop: 40,
-    alignItems: 'center',
     backgroundColor: '#2d5016',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   logoContainer: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#fff',
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  logoEmoji: {
+  logoText: {
     fontSize: 36,
   },
   appTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: 4,
   },
   appSubtitle: {
     fontSize: 14,
-    color: '#c8e6c9',
-    marginTop: 4,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  separator: {
+  menuContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  menuSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#888',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 12,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginVertical: 2,
+  },
+  menuItemActive: {
+    backgroundColor: '#e8f5e9',
+  },
+  menuIcon: {
+    fontSize: 22,
+    marginRight: 14,
+  },
+  menuLabel: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  menuLabelActive: {
+    color: '#2d5016',
+    fontWeight: '600',
+  },
+  menuDivider: {
     height: 1,
     backgroundColor: '#e0e0e0',
+    marginHorizontal: 20,
     marginVertical: 10,
-    marginHorizontal: 16,
   },
   drawerFooter: {
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    marginTop: 'auto',
+    alignItems: 'center',
   },
   footerText: {
     fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
+    color: '#888',
+  },
+  hamburgerButton: {
+    marginLeft: 16,
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hamburgerLine: {
+    width: 22,
+    height: 3,
+    backgroundColor: '#fff',
+    marginVertical: 2,
+    borderRadius: 2,
   },
 });
