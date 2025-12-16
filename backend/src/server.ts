@@ -4,6 +4,7 @@ import path from 'path';
 import multer from 'multer';
 import fs from 'fs';
 import routes from './routes';
+import geneticsRoutes from './routes-genetics';
 import './database'; // Inicializar banco de dados
 
 const app = express();
@@ -66,18 +67,23 @@ app.post('/api/upload', upload.single('photo'), (req, res) => {
 
 // Rotas da API
 app.use('/api', routes);
+app.use('/api', geneticsRoutes);
 
 // Rota raiz
 app.get('/', (req, res) => {
   res.json({ 
     message: '🌱 Grow System API',
-    version: '1.0.0',
+    version: '2.0.0',
     endpoints: {
       health: '/health',
       api: '/api',
       plants: '/api/plants',
       records: '/api/records',
       statistics: '/api/statistics',
+      genetics: '/api/genetics',
+      seedBatches: '/api/seed-batches',
+      clones: '/api/clones',
+      geneticBankStats: '/api/genetic-bank/stats',
       upload: '/api/upload'
     }
   });

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Plant, DailyRecord, Statistics, Sensor, SensorReading } from '../types';
+import { Plant, DailyRecord, Statistics, Sensor, SensorReading, GeneticStrain, SeedBatch, Clone } from '../types';
 
 // Para desenvolvimento, use o IP da sua máquina (não localhost)
 // iOS: Use o IP da rede local
@@ -145,6 +145,134 @@ export const readingsAPI = {
   
   create: async (readingData: Partial<SensorReading>) => {
     const { data } = await api.post<SensorReading>('/sensor-readings', readingData);
+    return data;
+  },
+};
+
+// ===== GENETIC BANK APIs =====
+
+// Genetic Strains API
+export const geneticsAPI = {
+  getAll: async (activeOnly = false) => {
+    const params = activeOnly ? '?active_only=true' : '';
+    const { data } = await api.get<GeneticStrain[]>(`/genetics${params}`);
+    return data;
+  },
+
+  getById: async (id: number) => {
+    const { data } = await api.get<GeneticStrain>(`/genetics/${id}`);
+    return data;
+  },
+
+  create: async (geneticData: Partial<GeneticStrain>) => {
+    const { data } = await api.post<GeneticStrain>('/genetics', geneticData);
+    return data;
+  },
+
+  update: async (id: number, geneticData: Partial<GeneticStrain>) => {
+    const { data } = await api.put<GeneticStrain>(`/genetics/${id}`, geneticData);
+    return data;
+  },
+
+  delete: async (id: number) => {
+    await api.delete(`/genetics/${id}`);
+  },
+};
+
+// Seed Batches API
+export const seedBatchesAPI = {
+  getAll: async (options?: { geneticId?: number; activeOnly?: boolean; availableOnly?: boolean }) => {
+    const params = new URLSearchParams();
+    if (options?.geneticId) params.append('genetic_id', options.geneticId.toString());
+    if (options?.activeOnly) params.append('active_only', 'true');
+    if (options?.availableOnly) params.append('available_only', 'true');
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const { data } = await api.get<SeedBatch[]>(`/seed-batches${query}`);
+    return data;
+  },
+
+  getByGenetic: async (geneticId: number) => {
+    const { data } = await api.get<SeedBatch[]>(`/seed-batches?genetic_id=${geneticId}`);
+    return data;
+  },
+
+  getById: async (id: number) => {
+    const { data } = await api.get<SeedBatch>(`/seed-batches/${id}`);
+    return data;
+  },
+
+  create: async (batchData: Partial<SeedBatch>) => {
+    const { data } = await api.post<SeedBatch>('/seed-batches', batchData);
+    return data;
+  },
+
+  update: async (id: number, batchData: Partial<SeedBatch>) => {
+    const { data } = await api.put<SeedBatch>(`/seed-batches/${id}`, batchData);
+    return data;
+  },
+
+  updateQuantity: async (id: number, quantity: number, operation: 'set' | 'add' | 'subtract') => {
+    const { data } = await api.patch(`/seed-batches/${id}/quantity`, { quantity, operation });
+    return data;
+  },
+
+  delete: async (id: number) => {
+    await api.delete(`/seed-batches/${id}`);
+  },
+};
+
+// Clones API
+export const clonesAPI = {
+  getAll: async (options?: { motherId?: number; status?: Clone['status'] }) => {
+    const params = new URLSearchParams();
+    if (options?.motherId) params.append('mother_id', options.motherId.toString());
+    if (options?.status) params.append('status', options.status);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const { data } = await api.get<Clone[]>(`/clones${query}`);
+    return data;
+  },
+
+  getById: async (id: number) => {
+    const { data } = await api.get<Clone>(`/clones/${id}`);
+    return data;
+  },
+
+  create: async (cloneData: Partial<Clone>) => {
+    const { data } = await api.post<Clone>('/clones', cloneData);
+    return data;
+  },
+
+  update: async (id: number, cloneData: Partial<Clone>) => {
+    const { data } = await api.put<Clone>(`/clones/${id}`, cloneData);
+    return data;
+  },
+
+  updateStatus: async (id: number, status: Clone['status'], rootingDate?: string) => {
+    const { data } = await api.patch<Clone>(`/clones/${id}/status`, { status, rooting_date: rootingDate });
+    return data;
+  },
+
+  delete: async (id: number) => {
+    await api.delete(`/clones/${id}`);
+  },
+};
+
+// Genetic Bank Stats API
+export const geneticBankAPI = {
+  getStats: async () => {
+    const { data } = await api.get<{
+      total_genetics: number;
+      total_batches: number;
+      total_seeds_available: number;
+      clones: {
+        total: number;
+        rooting: number;
+        rooted: number;
+        planted: number;
+      };
+      plants_from_seeds: number;
+      plants_from_clones: number;
+    }>('/genetic-bank/stats');
     return data;
   },
 };

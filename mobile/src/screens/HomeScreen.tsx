@@ -148,6 +148,12 @@ export default function HomeScreen({ navigation }: Props) {
 
         <View style={styles.actionButtons}>
           <TouchableOpacity
+            style={styles.geneticButton}
+            onPress={() => navigation.navigate('GeneticBank')}
+          >
+            <Text style={styles.buttonText}>🧬 Banco Genético</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigation.navigate('Sensors')}
           >
@@ -404,6 +410,12 @@ const styles = StyleSheet.create({
   phaseLabel: { fontSize: 12, color: '#666', marginTop: 5 },
   actionButtons: {
     gap: 10,
+  },
+  geneticButton: {
+    backgroundColor: '#7B68EE',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: '#2d5016',

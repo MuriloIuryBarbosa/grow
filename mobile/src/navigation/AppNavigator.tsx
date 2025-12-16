@@ -12,17 +12,31 @@ import EditRecordScreen from '../screens/EditRecordScreen';
 import SensorsScreen from '../screens/SensorsScreen';
 import RecordReadingScreen from '../screens/RecordReadingScreen';
 import NewSensorReadingScreen from '../screens/NewSensorReadingScreen';
+// Genetic Bank Screens
+import GeneticBankScreen from '../screens/GeneticBankScreen';
+import GeneticDetailScreen from '../screens/GeneticDetailScreen';
+import NewGeneticScreen from '../screens/NewGeneticScreen';
+import SeedBatchDetailScreen from '../screens/SeedBatchDetailScreen';
+import NewSeedBatchScreen from '../screens/NewSeedBatchScreen';
+import NewCloneScreen from '../screens/NewCloneScreen';
 
 export type RootStackParamList = {
   Home: undefined;
   PlantDetail: { id: number };
-  NewPlant: undefined;
+  NewPlant: { seedBatchId?: number; cloneId?: number };
   EditPlant: { id: number };
   NewRecord: { plantId: number };
   EditRecord: { plantId: number; recordId: number };
   Sensors: undefined;
   RecordReading: undefined;
   NewSensorReading: { sensor_id: number; sensor_name: string };
+  // Genetic Bank Routes
+  GeneticBank: undefined;
+  GeneticDetail: { id: number };
+  NewGenetic: { editId?: number };
+  SeedBatchDetail: { id: number };
+  NewSeedBatch: { geneticId?: number; editId?: number };
+  NewClone: { motherId?: number; motherName?: string; editId?: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,6 +45,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        id={undefined}
         initialRouteName="Home"
         screenOptions={{
           headerStyle: {
@@ -86,6 +101,43 @@ export default function AppNavigator() {
           name="NewSensorReading"
           component={NewSensorReadingScreen}
           options={{ title: 'Nova Leitura de Sensor' }}
+        />
+        {/* Genetic Bank Screens */}
+        <Stack.Screen
+          name="GeneticBank"
+          component={GeneticBankScreen}
+          options={{ title: '🧬 Banco Genético' }}
+        />
+        <Stack.Screen
+          name="GeneticDetail"
+          component={GeneticDetailScreen}
+          options={{ title: 'Detalhes da Genética' }}
+        />
+        <Stack.Screen
+          name="NewGenetic"
+          component={NewGeneticScreen}
+          options={({ route }) => ({ 
+            title: route.params?.editId ? 'Editar Genética' : 'Nova Genética' 
+          })}
+        />
+        <Stack.Screen
+          name="SeedBatchDetail"
+          component={SeedBatchDetailScreen}
+          options={{ title: 'Detalhes do Lote' }}
+        />
+        <Stack.Screen
+          name="NewSeedBatch"
+          component={NewSeedBatchScreen}
+          options={({ route }) => ({ 
+            title: route.params?.editId ? 'Editar Lote' : 'Novo Lote de Sementes' 
+          })}
+        />
+        <Stack.Screen
+          name="NewClone"
+          component={NewCloneScreen}
+          options={({ route }) => ({ 
+            title: route.params?.editId ? 'Editar Clone' : 'Novo Clone' 
+          })}
         />
       </Stack.Navigator>
     </NavigationContainer>

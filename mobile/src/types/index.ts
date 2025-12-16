@@ -10,6 +10,101 @@ export interface PhaseHistory {
   created_at?: string;
 }
 
+// ============================================
+// GENETIC BANK TYPES
+// ============================================
+
+// Genetic Strain - Catálogo de genéticas
+export interface GeneticStrain {
+  id?: number;
+  name: string;
+  breeder?: string;
+  type?: 'indica' | 'sativa' | 'hybrid' | 'ruderalis' | 'unknown';
+  indica_percentage?: number;
+  sativa_percentage?: number;
+  flowering_time_min?: number;
+  flowering_time_max?: number;
+  height_indoor?: string;
+  height_outdoor?: string;
+  yield_indoor?: string;
+  yield_outdoor?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  thc_content?: number;
+  cbd_content?: number;
+  thc_percentage?: string;
+  cbd_percentage?: string;
+  flavors?: string;
+  effects?: string;
+  description?: string;
+  grow_notes?: string;
+  photo_path?: string;
+  is_active?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Campos calculados da view
+  active_batches?: number;
+  total_seeds?: number;
+  total_plants?: number;
+}
+
+// Seed Batch - Lote de sementes
+export interface SeedBatch {
+  id?: number;
+  genetic_strain_id?: number;
+  batch_code: string;
+  source?: string;
+  source_type?: 'purchased' | 'gifted' | 'harvested' | 'traded';
+  acquisition_date?: string;
+  initial_quantity: number;
+  current_quantity: number;
+  seeds_germinated?: number;
+  seed_type?: 'regular' | 'feminized' | 'autoflower' | 'cbd' | 'unknown';
+  generation?: string;
+  storage_location?: string;
+  storage_conditions?: string;
+  expiration_date?: string;
+  germination_rate?: number;
+  plants_generated?: number;
+  price?: number;
+  notes?: string;
+  is_active?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Campos da view v_seed_batches_full
+  genetic_name?: string;
+  breeder?: string;
+  genetic_type?: string;
+  flowering_time_min?: number;
+  flowering_time_max?: number;
+}
+
+// Clone - Clones de plantas mãe
+export interface Clone {
+  id?: number;
+  mother_plant_id: number;
+  clone_code: string;
+  cut_date: string;
+  rooting_date?: string;
+  days_to_root?: number;
+  status: 'cutting' | 'rooting' | 'rooted' | 'planted' | 'failed' | 'discarded';
+  destination_plant_id?: number;
+  rooting_method?: string;
+  rooting_medium?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Campos da view v_clones_full
+  mother_plant_name?: string;
+  mother_plant_code?: string;
+  mother_genetic?: string;
+  destination_plant_name?: string;
+  destination_plant_code?: string;
+}
+
+// ============================================
+// PLANT TYPES (atualizado)
+// ============================================
+
 // Plant Types
 export interface Plant {
   id?: number;
@@ -28,8 +123,21 @@ export interface Plant {
   failure_reason?: string;
   photo_path?: string;
   profile_photo?: string;
+  // Campos de rastreabilidade genética
+  genetic_strain_id?: number;
+  seed_batch_id?: number;
+  source_clone_id?: number;
+  origin_type?: 'seed' | 'clone' | 'unknown';
   created_at?: string;
   phase_history?: PhaseHistory[];
+  // Campos da view v_plants_genetic_trace
+  seed_batch_code?: string;
+  genetic_strain_name?: string;
+  genetic_breeder?: string;
+  genetic_type?: string;
+  source_clone_code?: string;
+  mother_plant_name?: string;
+  mother_plant_code?: string;
 }
 
 // Daily Record Types
