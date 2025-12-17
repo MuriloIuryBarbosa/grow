@@ -14,6 +14,15 @@ export interface Plant {
   failure_date?: string;
   failure_reason?: string;
   photo_path?: string;
+  profile_photo?: string;
+  // Campos de rastreabilidade genética
+  seed_batch_id?: number;
+  source_clone_id?: number;
+  origin_type?: 'seed' | 'clone' | 'unknown';
+  // Campos calculados (JOIN com seed_batches e genetic_strains)
+  seed_batch_code?: string;
+  genetic_strain_name?: string;
+  genetic_breeder?: string;
   created_at?: string;
 }
 

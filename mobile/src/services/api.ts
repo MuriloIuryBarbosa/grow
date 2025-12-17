@@ -4,7 +4,8 @@ import { Plant, DailyRecord, Statistics, Sensor, SensorReading, GeneticStrain, S
 // Para desenvolvimento, use o IP da sua máquina (não localhost)
 // iOS: Use o IP da rede local
 // Android Emulator: Use 'http://10.0.2.2:3000'
-const API_URL = 'http://192.168.1.6:3000/api';
+export const API_BASE_URL = 'http://192.168.1.6:3000';
+const API_URL = `${API_BASE_URL}/api`;
 
 const api = axios.create({
   baseURL: API_URL,

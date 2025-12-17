@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { plantsAPI } from '../services/api';
-import { Plant } from '../types';
+import { plantsAPI, seedBatchesAPI } from '../services/api';
+import { Plant, SeedBatch } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewPlant'>;
 
@@ -38,6 +39,10 @@ const PHASES = [
 
 export default function NewPlantScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
+  const [seedBatches, setSeedBatches] = useState<SeedBatch[]>([]);
+  const [loadingSeedBatches, setLoadingSeedBatches] = useState(true);
+  const [showSeedBatchModal, setShowSeedBatchModal] = useState(false);
+  const [selectedSeedBatch, setSelectedSeedBatch] = useState<SeedBatch | null>(null);
   const [formData, setFormData] = useState<Partial<Plant>>({
     name: '',
     genetic: '',
@@ -49,9 +54,47 @@ export default function NewPlantScreen({ navigation }: Props) {
     current_phase: 'germinacao',
     current_location: '',
     status: 'ativa',
+    seed_batch_id: undefined,
+    origin_type: 'unknown',
   });
   const [showSubstrateOptions, setShowSubstrateOptions] = useState(false);
   const [showPhaseOptions, setShowPhaseOptions] = useState(false);
+
+  // Carregar lotes de sementes disponíveis
+  useEffect(() => {
+    const loadSeedBatches = async () => {
+      try {
+        const batches = await seedBatchesAPI.getAll({ availableOnly: true });
+        setSeedBatches(batches);
+      } catch (error) {
+        console.error('Erro ao carregar lotes de sementes:', error);
+      } finally {
+        setLoadingSeedBatches(false);
+      }
+    };
+    loadSeedBatches();
+  }, []);
+
+  // Quando selecionar um lote de sementes, auto-preencher genética
+  const handleSeedBatchSelect = (batch: SeedBatch | null) => {
+    setSelectedSeedBatch(batch);
+    setShowSeedBatchModal(false);
+    
+    if (batch) {
+      setFormData(prev => ({
+        ...prev,
+        seed_batch_id: batch.id,
+        origin_type: 'seed',
+        genetic: batch.genetic_name || prev.genetic,
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        seed_batch_id: undefined,
+        origin_type: 'unknown',
+      }));
+    }
+  };
 
   const updateField = (field: keyof Plant, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -165,16 +208,65 @@ export default function NewPlantScreen({ navigation }: Props) {
           <Text style={styles.hint}>Identificador único para a planta</Text>
         </View>
 
+        {/* Lote de Sementes */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>🌱 Lote de Sementes</Text>
+          <TouchableOpacity
+            style={[styles.selectButton, selectedSeedBatch && styles.selectButtonSelected]}
+            onPress={() => setShowSeedBatchModal(true)}
+            disabled={loadingSeedBatches}
+          >
+            {loadingSeedBatches ? (
+              <ActivityIndicator size="small" color="#4CAF50" />
+            ) : (
+              <>
+                <View style={styles.seedBatchSelectContent}>
+                  {selectedSeedBatch ? (
+                    <>
+                      <Text style={styles.seedBatchSelectCode}>{selectedSeedBatch.batch_code}</Text>
+                      <Text style={styles.seedBatchSelectGenetic}>
+                        {selectedSeedBatch.genetic_name || 'Genética não especificada'}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.selectButtonPlaceholder}>
+                      Selecionar lote de sementes (opcional)
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.selectArrow}>▼</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          {selectedSeedBatch && (
+            <TouchableOpacity
+              style={styles.clearSeedBatchButton}
+              onPress={() => handleSeedBatchSelect(null)}
+            >
+              <Text style={styles.clearSeedBatchText}>✕ Remover seleção</Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.hint}>
+            Vincule a planta a um lote do banco de sementes
+          </Text>
+        </View>
+
         {/* Genética */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Genética/Variedade</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, selectedSeedBatch && styles.inputDisabled]}
             placeholder="Ex: Indica, Sativa, Híbrido..."
             placeholderTextColor="#999"
             value={formData.genetic}
             onChangeText={(text) => updateField('genetic', text)}
+            editable={!selectedSeedBatch}
           />
+          {selectedSeedBatch && (
+            <Text style={styles.hintSuccess}>
+              ✓ Preenchido automaticamente pelo lote de sementes
+            </Text>
+          )}
         </View>
 
         {/* Data de Plantio */}
@@ -339,6 +431,83 @@ export default function NewPlantScreen({ navigation }: Props) {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Modal de Seleção de Lote de Sementes */}
+      <Modal
+        visible={showSeedBatchModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSeedBatchModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>🌱 Selecionar Lote de Sementes</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowSeedBatchModal(false)}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalList}>
+              {seedBatches.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateIcon}>🌱</Text>
+                  <Text style={styles.emptyStateText}>
+                    Nenhum lote de sementes disponível
+                  </Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    Cadastre sementes no Banco Genético
+                  </Text>
+                </View>
+              ) : (
+                seedBatches.map((batch) => (
+                  <TouchableOpacity
+                    key={batch.id}
+                    style={[
+                      styles.seedBatchItem,
+                      selectedSeedBatch?.id === batch.id && styles.seedBatchItemSelected,
+                    ]}
+                    onPress={() => handleSeedBatchSelect(batch)}
+                  >
+                    <View style={styles.seedBatchItemContent}>
+                      <View style={styles.seedBatchItemHeader}>
+                        <Text style={styles.seedBatchItemCode}>{batch.batch_code}</Text>
+                        <View style={styles.seedBatchQuantityBadge}>
+                          <Text style={styles.seedBatchQuantityText}>
+                            {batch.current_quantity} disponíveis
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.seedBatchItemGenetic}>
+                        {batch.genetic_name || 'Genética não especificada'}
+                      </Text>
+                      {batch.breeder && (
+                        <Text style={styles.seedBatchItemBreeder}>
+                          Breeder: {batch.breeder}
+                        </Text>
+                      )}
+                      {batch.seed_type && (
+                        <Text style={styles.seedBatchItemType}>
+                          Tipo: {batch.seed_type === 'feminized' ? 'Feminizada' :
+                                 batch.seed_type === 'autoflower' ? 'Automática' :
+                                 batch.seed_type === 'regular' ? 'Regular' :
+                                 batch.seed_type === 'cbd' ? 'CBD' : batch.seed_type}
+                        </Text>
+                      )}
+                    </View>
+                    {selectedSeedBatch?.id === batch.id && (
+                      <Text style={styles.seedBatchItemCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -495,5 +664,155 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  // Estilos para Seleção de Lote de Sementes
+  selectButtonSelected: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#f0fff0',
+  },
+  seedBatchSelectContent: {
+    flex: 1,
+  },
+  seedBatchSelectCode: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2d5016',
+  },
+  seedBatchSelectGenetic: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  clearSeedBatchButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  clearSeedBatchText: {
+    fontSize: 13,
+    color: '#e53935',
+  },
+  inputDisabled: {
+    backgroundColor: '#f0f0f0',
+    color: '#666',
+  },
+  hintSuccess: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  // Estilos do Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalCloseButton: {
+    padding: 8,
+  },
+  modalCloseText: {
+    fontSize: 20,
+    color: '#666',
+  },
+  modalList: {
+    padding: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  seedBatchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  seedBatchItemSelected: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#e8f5e9',
+  },
+  seedBatchItemContent: {
+    flex: 1,
+  },
+  seedBatchItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  seedBatchItemCode: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  seedBatchQuantityBadge: {
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  seedBatchQuantityText: {
+    fontSize: 11,
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  seedBatchItemGenetic: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  seedBatchItemBreeder: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  seedBatchItemType: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  seedBatchItemCheck: {
+    fontSize: 24,
+    color: '#4CAF50',
+    marginLeft: 12,
   },
 });

@@ -16,7 +16,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { usePlant } from '../hooks/usePlants';
 import { useRecords } from '../hooks/useRecords';
-import { plantsAPI } from '../services/api';
+import { plantsAPI, API_BASE_URL } from '../services/api';
 import { formatDate, daysBetween } from '../utils/date.utils';
 import { Plant } from '../types';
 import GrowthChart from '../components/GrowthChart';
@@ -229,7 +229,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
       } as any);
 
       const uploadResponse = await axios.post(
-        'http://192.168.1.6:3000/api/upload',
+        `${API_BASE_URL}/api/upload`,
         formData,
         {
           headers: {
@@ -359,7 +359,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
         >
           {plant.profile_photo ? (
             <Image
-              source={{ uri: `http://192.168.1.6:3000${plant.profile_photo}` }}
+              source={{ uri: `${API_BASE_URL}${plant.profile_photo}` }}
               style={styles.profilePhoto}
             />
           ) : (
@@ -383,10 +383,41 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
       {/* Foto da planta */}
       {plant.photo_path && (
         <Image
-          source={{ uri: `http://192.168.1.6:3000${plant.photo_path}` }}
+          source={{ uri: `${API_BASE_URL}${plant.photo_path}` }}
           style={styles.plantImage}
           resizeMode="cover"
         />
+      )}
+
+      {/* Origem Genética - Lote de Sementes */}
+      {plant.seed_batch_id && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>🧬 Origem Genética</Text>
+          <View style={styles.seedBatchInfo}>
+            <View style={styles.seedBatchRow}>
+              <Text style={styles.seedBatchLabel}>Lote de Sementes:</Text>
+              <Text style={styles.seedBatchValue}>{plant.seed_batch_code || 'N/A'}</Text>
+            </View>
+            {plant.genetic_strain_name && (
+              <View style={styles.seedBatchRow}>
+                <Text style={styles.seedBatchLabel}>Genética:</Text>
+                <Text style={styles.seedBatchValue}>{plant.genetic_strain_name}</Text>
+              </View>
+            )}
+            {plant.genetic_breeder && (
+              <View style={styles.seedBatchRow}>
+                <Text style={styles.seedBatchLabel}>Breeder:</Text>
+                <Text style={styles.seedBatchValue}>{plant.genetic_breeder}</Text>
+              </View>
+            )}
+            <View style={styles.seedBatchRow}>
+              <Text style={styles.seedBatchLabel}>Origem:</Text>
+              <View style={styles.originBadge}>
+                <Text style={styles.originBadgeText}>🌱 Semente</Text>
+              </View>
+            </View>
+          </View>
+        </View>
       )}
 
       {/* Informações básicas */}
@@ -509,7 +540,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
             >
               {record.photo_path && (
                 <Image
-                  source={{ uri: `http://192.168.1.6:3000${record.photo_path}` }}
+                  source={{ uri: `${API_BASE_URL}${record.photo_path}` }}
                   style={styles.recordImage}
                   resizeMode="cover"
                 />
@@ -936,5 +967,45 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     color: '#666',
+  },
+  // Estilos para Origem Genética
+  seedBatchInfo: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  seedBatchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  seedBatchLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  seedBatchValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+  originBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  originBadgeText: {
+    fontSize: 12,
+    color: '#2d5016',
+    fontWeight: '600',
   },
 });

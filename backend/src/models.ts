@@ -88,8 +88,9 @@ export const PlantModel = {
 
     const stmt = db.prepare(`
       INSERT INTO plants (name, genetic, code, planting_date, germination_date, 
-                         days_to_germination, substrate, substrate_other, current_phase, current_location, status, photo_path)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         days_to_germination, substrate, substrate_other, current_phase, 
+                         current_location, status, photo_path, seed_batch_id, origin_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
@@ -104,7 +105,9 @@ export const PlantModel = {
       initialPhase,
       plant.current_location || null,
       'ativa',
-      plant.photo_path || null
+      plant.photo_path || null,
+      plant.seed_batch_id || null,
+      plant.seed_batch_id ? 'seed' : (plant.origin_type || 'unknown')
     );
 
     const plantId = info.lastInsertRowid as number;
@@ -127,9 +130,18 @@ export const PlantModel = {
     return stmt.all() as Plant[];
   },
 
-  // Buscar planta por ID
+  // Buscar planta por ID (com dados do lote de sementes)
   findById(id: number): Plant | undefined {
-    const stmt = db.prepare('SELECT * FROM plants WHERE id = ?');
+    const stmt = db.prepare(`
+      SELECT p.*, 
+             sb.batch_code as seed_batch_code,
+             gs.name as genetic_strain_name,
+             gs.breeder as genetic_breeder
+      FROM plants p
+      LEFT JOIN seed_batches sb ON p.seed_batch_id = sb.id
+      LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE p.id = ?
+    `);
     return stmt.get(id) as Plant | undefined;
   },
 
@@ -284,6 +296,10 @@ export const PlantModel = {
       fields.push('photo_path = ?');
       values.push(plant.photo_path);
     }
+    if (plant.profile_photo !== undefined) {
+      fields.push('profile_photo = ?');
+      values.push(plant.profile_photo);
+    }
     if (plant.code !== undefined) {
       fields.push('code = ?');
       values.push(plant.code);
@@ -299,6 +315,19 @@ export const PlantModel = {
     if (plant.failure_reason !== undefined) {
       fields.push('failure_reason = ?');
       values.push(plant.failure_reason);
+    }
+    if (plant.seed_batch_id !== undefined) {
+      fields.push('seed_batch_id = ?');
+      values.push(plant.seed_batch_id);
+      // Atualizar origin_type se seed_batch_id for definido
+      if (plant.seed_batch_id) {
+        fields.push('origin_type = ?');
+        values.push('seed');
+      }
+    }
+    if (plant.origin_type !== undefined) {
+      fields.push('origin_type = ?');
+      values.push(plant.origin_type);
     }
 
     if (fields.length === 0) return false;

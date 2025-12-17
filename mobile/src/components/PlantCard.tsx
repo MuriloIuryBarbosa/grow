@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Plant } from '../types';
 import { formatDateLocal } from '../utils/date.utils';
-import { recordsAPI } from '../services/api';
+import { recordsAPI, API_BASE_URL } from '../services/api';
 
 interface PlantCardProps {
   plant: Plant;
@@ -48,7 +48,7 @@ export default function PlantCard({ plant, onPress }: PlantCardProps) {
   };
 
   const profilePhotoUrl = plant.profile_photo 
-    ? `http://192.168.1.6:3000${plant.profile_photo}`
+    ? `${API_BASE_URL}${plant.profile_photo}`
     : null;
 
   return (

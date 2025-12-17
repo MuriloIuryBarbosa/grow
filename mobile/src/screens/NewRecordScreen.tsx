@@ -15,7 +15,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { recordsAPI } from '../services/api';
+import { recordsAPI, API_BASE_URL } from '../services/api';
 import { DailyRecord } from '../types';
 import axios from 'axios';
 
@@ -25,6 +25,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const { plantId } = route.params;
   const [loading, setLoading] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
 
   const today = new Date().toISOString().split('T')[0];
   
@@ -64,7 +65,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         } as any);
 
         const uploadResponse = await axios.post(
-          'http://192.168.1.6:3000/api/upload',
+          `${API_BASE_URL}/api/upload`,
           uploadFormData,
           {
             headers: {
@@ -175,8 +176,23 @@ export default function NewRecordScreen({ route, navigation }: Props) {
             <Text style={styles.label}>Tamanho (cm)</Text>
             <TextInput
               style={styles.input}
-              value={formData.plant_size?.toString() || ''}
-              onChangeText={(value) => updateField('plant_size', value ? parseFloat(value) : undefined)}
+              value={sizeText}
+              onChangeText={(value) => {
+                // Permitir entrada de decimais (ponto ou vírgula)
+                const normalized = value.replace(',', '.');
+                // Validar formato: números com opcional ponto decimal
+                if (normalized === '' || /^\d*\.?\d*$/.test(normalized)) {
+                  setSizeText(normalized);
+                  if (normalized === '' || normalized === '.') {
+                    updateField('plant_size', undefined);
+                  } else {
+                    const num = parseFloat(normalized);
+                    if (!isNaN(num)) {
+                      updateField('plant_size', num);
+                    }
+                  }
+                }
+              }}
               placeholder="Ex: 25.5"
               keyboardType="decimal-pad"
             />

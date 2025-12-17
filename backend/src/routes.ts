@@ -109,7 +109,7 @@ router.patch('/plants/:id/profile-photo', (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const { profile_photo } = req.body;
 
-    const success = PlantModel.update(id, { photo_path: profile_photo });
+    const success = PlantModel.update(id, { profile_photo: profile_photo });
     if (!success) {
       return res.status(404).json({ error: 'Planta não encontrada' });
     }

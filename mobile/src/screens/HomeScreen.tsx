@@ -18,6 +18,7 @@ import { formatDateLocal } from '../utils/date.utils';
 import PlantCard from '../components/PlantCard';
 import SensorDashboard from '../components/SensorDashboard';
 import PlantRanking from '../components/PlantRanking';
+import DashboardEvolutionCharts from '../components/DashboardEvolutionCharts';
 import { statisticsAPI, PhaseStatistics } from '../services/api';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -180,6 +181,12 @@ export default function HomeScreen({ navigation }: Props) {
           {/* Floração */}
           {renderPhaseEvolutionRow('floracao', 'Floração', '#FF9800')}
         </View>
+
+        {/* Gráficos de Evolução Geral */}
+        <DashboardEvolutionCharts 
+          plants={plants}
+          onPlantPress={(id) => navigation.navigate('PlantDetail', { id })}
+        />
 
         {/* Ranking de Evolução */}
         <PlantRanking 
