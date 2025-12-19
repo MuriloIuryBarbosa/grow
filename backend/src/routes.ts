@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { PlantModel, DailyRecordModel, StatisticsModel } from './models';
+import { PlantModel, DailyRecordModel, StatisticsModel, GeneticStrainModel, SeedBatchModel } from './models';
 import { Plant, DailyRecord } from './types';
 import db from './database';
 
@@ -807,6 +807,241 @@ router.get('/sensor-readings/latest', (req: Request, res: Response) => {
     res.json(latest);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar últimas leituras' });
+  }
+});
+
+// ============================================
+// ROTAS DO BANCO GENÉTICO
+// ============================================
+
+// ===== GENETIC STRAINS =====
+
+// Listar todas as genéticas ativas
+router.get('/genetic-strains', (req: Request, res: Response) => {
+  try {
+    const strains = GeneticStrainModel.findAll();
+    res.json(strains);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar genéticas' });
+  }
+});
+
+// Buscar genética por ID
+router.get('/genetic-strains/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const strain = GeneticStrainModel.findById(Number(id));
+    
+    if (!strain) {
+      return res.status(404).json({ error: 'Genética não encontrada' });
+    }
+    
+    res.json(strain);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar genética' });
+  }
+});
+
+// Criar nova genética
+router.post('/genetic-strains', (req: Request, res: Response) => {
+  try {
+    const strainData = req.body;
+    const strain = GeneticStrainModel.create(strainData);
+    res.status(201).json(strain);
+  } catch (error: any) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'Já existe uma genética com este nome' });
+    } else {
+      res.status(500).json({ error: 'Erro ao criar genética' });
+    }
+  }
+});
+
+// Atualizar genética
+router.put('/genetic-strains/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const strainData = req.body;
+    
+    const success = GeneticStrainModel.update(Number(id), strainData);
+    if (!success) {
+      return res.status(404).json({ error: 'Genética não encontrada' });
+    }
+    
+    const updated = GeneticStrainModel.findById(Number(id));
+    res.json(updated);
+  } catch (error: any) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'Já existe uma genética com este nome' });
+    } else {
+      res.status(500).json({ error: 'Erro ao atualizar genética' });
+    }
+  }
+});
+
+// Deletar genética
+router.delete('/genetic-strains/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const success = GeneticStrainModel.delete(Number(id));
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Genética não encontrada' });
+    }
+    
+    res.json({ message: 'Genética removida com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao deletar genética' });
+  }
+});
+
+// ===== SEED BATCHES =====
+
+// Listar todos os lotes de sementes
+router.get('/seed-batches', (req: Request, res: Response) => {
+  try {
+    const { availableOnly } = req.query;
+    
+    let batches;
+    if (availableOnly === 'true') {
+      batches = SeedBatchModel.findAvailable();
+    } else {
+      batches = SeedBatchModel.findAll();
+    }
+    
+    res.json(batches);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar lotes de sementes' });
+  }
+});
+
+// Buscar lote por ID
+router.get('/seed-batches/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const batch = SeedBatchModel.findById(Number(id));
+    
+    if (!batch) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    res.json(batch);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar lote' });
+  }
+});
+
+// Criar novo lote de sementes
+router.post('/seed-batches', (req: Request, res: Response) => {
+  try {
+    const batchData = req.body;
+    const batch = SeedBatchModel.create(batchData);
+    res.status(201).json(batch);
+  } catch (error: any) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'Já existe um lote com este código' });
+    } else {
+      res.status(500).json({ error: 'Erro ao criar lote' });
+    }
+  }
+});
+
+// Atualizar lote
+router.put('/seed-batches/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const batchData = req.body;
+    
+    const success = SeedBatchModel.update(Number(id), batchData);
+    if (!success) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    const updated = SeedBatchModel.findById(Number(id));
+    res.json(updated);
+  } catch (error: any) {
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'Já existe um lote com este código' });
+    } else {
+      res.status(500).json({ error: 'Erro ao atualizar lote' });
+    }
+  }
+});
+
+// Deletar lote
+router.delete('/seed-batches/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const success = SeedBatchModel.delete(Number(id));
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    res.json({ message: 'Lote removido com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao deletar lote' });
+  }
+});
+
+// ===== GERMINAÇÃO EM LOTE =====
+
+// Germinar sementes em lote
+router.post('/seed-batches/:id/germinate', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { quantity, substrate, substrate_other, location, notes } = req.body;
+    
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ error: 'Quantidade deve ser maior que 0' });
+    }
+    
+    // Verificar se o lote existe e tem sementes suficientes
+    const batch = SeedBatchModel.findById(Number(id));
+    if (!batch) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    if (batch.current_quantity < quantity) {
+      return res.status(400).json({ error: `Lote tem apenas ${batch.current_quantity} sementes disponíveis` });
+    }
+    
+    const createdPlants = [];
+    const plantingDate = new Date().toISOString().split('T')[0];
+    
+    // Criar plantas em lote
+    for (let i = 0; i < quantity; i++) {
+      const plantData = {
+        name: `${batch.genetic_name} #${i + 1}`,
+        genetic: batch.genetic_name,
+        planting_date: plantingDate,
+        substrate: substrate || 'Terra vegetal',
+        substrate_other: substrate_other || null,
+        current_phase: 'germinacao' as const,
+        current_location: location || null,
+        status: 'ativa' as const,
+        seed_batch_id: batch.id,
+        origin_type: 'seed' as const,
+      };
+      
+      const plant = PlantModel.create(plantData);
+      createdPlants.push(plant);
+    }
+    
+    // Decrementar quantidade de sementes no lote
+    SeedBatchModel.decrementQuantity(Number(id), quantity);
+    
+    // Incrementar contador de plantas geradas
+    SeedBatchModel.incrementPlantsGenerated(Number(id), quantity);
+    
+    res.json({
+      message: `${quantity} plantas criadas com sucesso`,
+      plants: createdPlants,
+      batch_code: batch.batch_code
+    });
+  } catch (error) {
+    console.error('Erro ao germinar sementes:', error);
+    res.status(500).json({ error: 'Erro ao germinar sementes' });
   }
 });
 

@@ -65,8 +65,36 @@ export const PhaseHistoryModel = {
 };
 
 export const PlantModel = {
+  // Gerar código automático sequencial
+  generateNextCode(): string {
+    const stmt = db.prepare(`
+      SELECT code FROM plants 
+      WHERE code LIKE 'VASO%' 
+      ORDER BY CAST(SUBSTR(code, 5) AS INTEGER) DESC 
+      LIMIT 1
+    `);
+    
+    const lastCode = stmt.get() as { code: string } | undefined;
+    
+    if (!lastCode) {
+      return 'VASO001';
+    }
+    
+    // Extrair o número do código (VASO001 -> 1)
+    const match = lastCode.code.match(/^VASO(\d+)$/);
+    if (!match) {
+      return 'VASO001';
+    }
+    
+    const nextNumber = parseInt(match[1]) + 1;
+    return `VASO${nextNumber.toString().padStart(3, '0')}`;
+  },
+
   // Criar nova planta
   create(plant: Omit<Plant, 'id' | 'created_at'>): Plant {
+    // Gerar código automaticamente se não fornecido
+    const code = plant.code || this.generateNextCode();
+
     // Calcular dias de germinação se ambas as datas estiverem presentes
     let daysToGermination = plant.days_to_germination;
     if (plant.germination_date && plant.planting_date && !daysToGermination) {
@@ -96,7 +124,7 @@ export const PlantModel = {
     const info = stmt.run(
       plant.name,
       plant.genetic || null,
-      plant.code,
+      code,
       plant.planting_date,
       plant.germination_date || null,
       daysToGermination || null,
@@ -535,5 +563,257 @@ export const StatisticsModel = {
     }
 
     return stats;
+  }
+};
+
+// ============================================
+// MODELOS DO BANCO GENÉTICO
+// ============================================
+
+export const GeneticStrainModel = {
+  // Criar nova genética
+  create(strain: Omit<GeneticStrain, 'id' | 'created_at' | 'updated_at'>): GeneticStrain {
+    const stmt = db.prepare(`
+      INSERT INTO genetic_strains (name, breeder, type, indica_percentage, sativa_percentage,
+                                   flowering_time_min, flowering_time_max, height_indoor, height_outdoor,
+                                   yield_indoor, yield_outdoor, difficulty, thc_percentage, cbd_percentage,
+                                   flavors, effects, description, grow_notes, photo_path, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const info = stmt.run(
+      strain.name,
+      strain.breeder || null,
+      strain.type || 'unknown',
+      strain.indica_percentage || null,
+      strain.sativa_percentage || null,
+      strain.flowering_time_min || null,
+      strain.flowering_time_max || null,
+      strain.height_indoor || null,
+      strain.height_outdoor || null,
+      strain.yield_indoor || null,
+      strain.yield_outdoor || null,
+      strain.difficulty || null,
+      strain.thc_percentage || null,
+      strain.cbd_percentage || null,
+      strain.flavors ? JSON.stringify(strain.flavors) : null,
+      strain.effects ? JSON.stringify(strain.effects) : null,
+      strain.description || null,
+      strain.grow_notes || null,
+      strain.photo_path || null,
+      strain.is_active !== undefined ? strain.is_active : true
+    );
+
+    return { ...strain, id: info.lastInsertRowid as number };
+  },
+
+  // Buscar todas as genéticas ativas
+  findAll(): GeneticStrain[] {
+    const stmt = db.prepare('SELECT * FROM genetic_strains WHERE is_active = 1 ORDER BY name ASC');
+    const results = stmt.all() as any[];
+    
+    // Parse JSON fields
+    return results.map(strain => ({
+      ...strain,
+      flavors: strain.flavors ? JSON.parse(strain.flavors) : null,
+      effects: strain.effects ? JSON.parse(strain.effects) : null,
+    }));
+  },
+
+  // Buscar genética por ID
+  findById(id: number): GeneticStrain | undefined {
+    const stmt = db.prepare('SELECT * FROM genetic_strains WHERE id = ?');
+    const result = stmt.get(id) as any;
+    
+    if (!result) return undefined;
+    
+    return {
+      ...result,
+      flavors: result.flavors ? JSON.parse(result.flavors) : null,
+      effects: result.effects ? JSON.parse(result.effects) : null,
+    };
+  },
+
+  // Buscar genética por nome
+  findByName(name: string): GeneticStrain | undefined {
+    const stmt = db.prepare('SELECT * FROM genetic_strains WHERE name = ? AND is_active = 1');
+    const result = stmt.get(name) as any;
+    
+    if (!result) return undefined;
+    
+    return {
+      ...result,
+      flavors: result.flavors ? JSON.parse(result.flavors) : null,
+      effects: result.effects ? JSON.parse(result.effects) : null,
+    };
+  },
+
+  // Atualizar genética
+  update(id: number, strain: Partial<GeneticStrain>): boolean {
+    const existing = this.findById(id);
+    if (!existing) return false;
+
+    const fields = [];
+    const values = [];
+
+    if (strain.name !== undefined) { fields.push('name = ?'); values.push(strain.name); }
+    if (strain.breeder !== undefined) { fields.push('breeder = ?'); values.push(strain.breeder); }
+    if (strain.type !== undefined) { fields.push('type = ?'); values.push(strain.type); }
+    if (strain.indica_percentage !== undefined) { fields.push('indica_percentage = ?'); values.push(strain.indica_percentage); }
+    if (strain.sativa_percentage !== undefined) { fields.push('sativa_percentage = ?'); values.push(strain.sativa_percentage); }
+    if (strain.flowering_time_min !== undefined) { fields.push('flowering_time_min = ?'); values.push(strain.flowering_time_min); }
+    if (strain.flowering_time_max !== undefined) { fields.push('flowering_time_max = ?'); values.push(strain.flowering_time_max); }
+    if (strain.height_indoor !== undefined) { fields.push('height_indoor = ?'); values.push(strain.height_indoor); }
+    if (strain.height_outdoor !== undefined) { fields.push('height_outdoor = ?'); values.push(strain.height_outdoor); }
+    if (strain.yield_indoor !== undefined) { fields.push('yield_indoor = ?'); values.push(strain.yield_indoor); }
+    if (strain.yield_outdoor !== undefined) { fields.push('yield_outdoor = ?'); values.push(strain.yield_outdoor); }
+    if (strain.difficulty !== undefined) { fields.push('difficulty = ?'); values.push(strain.difficulty); }
+    if (strain.thc_percentage !== undefined) { fields.push('thc_percentage = ?'); values.push(strain.thc_percentage); }
+    if (strain.cbd_percentage !== undefined) { fields.push('cbd_percentage = ?'); values.push(strain.cbd_percentage); }
+    if (strain.flavors !== undefined) { fields.push('flavors = ?'); values.push(JSON.stringify(strain.flavors)); }
+    if (strain.effects !== undefined) { fields.push('effects = ?'); values.push(JSON.stringify(strain.effects)); }
+    if (strain.description !== undefined) { fields.push('description = ?'); values.push(strain.description); }
+    if (strain.grow_notes !== undefined) { fields.push('grow_notes = ?'); values.push(strain.grow_notes); }
+    if (strain.photo_path !== undefined) { fields.push('photo_path = ?'); values.push(strain.photo_path); }
+    if (strain.is_active !== undefined) { fields.push('is_active = ?'); values.push(strain.is_active); }
+
+    if (fields.length === 0) return true;
+
+    fields.push('updated_at = datetime(\'now\', \'localtime\')');
+    values.push(id);
+
+    const stmt = db.prepare(`UPDATE genetic_strains SET ${fields.join(', ')} WHERE id = ?`);
+    const info = stmt.run(...values);
+    return info.changes > 0;
+  },
+
+  // Deletar genética (soft delete)
+  delete(id: number): boolean {
+    const stmt = db.prepare('UPDATE genetic_strains SET is_active = 0, updated_at = datetime(\'now\', \'localtime\') WHERE id = ?');
+    const info = stmt.run(id);
+    return info.changes > 0;
+  }
+};
+
+export const SeedBatchModel = {
+  // Criar novo lote de sementes
+  create(batch: Omit<SeedBatch, 'id' | 'created_at' | 'updated_at'>): SeedBatch {
+    const stmt = db.prepare(`
+      INSERT INTO seed_batches (genetic_strain_id, batch_code, source, source_type, acquisition_date,
+                               initial_quantity, current_quantity, seed_type, generation, storage_location,
+                               storage_conditions, expiration_date, germination_rate, plants_generated, notes, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const info = stmt.run(
+      batch.genetic_strain_id,
+      batch.batch_code,
+      batch.source,
+      batch.source_type || 'purchased',
+      batch.acquisition_date,
+      batch.initial_quantity,
+      batch.current_quantity || batch.initial_quantity,
+      batch.seed_type || 'regular',
+      batch.generation || null,
+      batch.storage_location || null,
+      batch.storage_conditions || null,
+      batch.expiration_date || null,
+      batch.germination_rate || null,
+      batch.plants_generated || 0,
+      batch.notes || null,
+      batch.is_active !== undefined ? batch.is_active : true
+    );
+
+    return { ...batch, id: info.lastInsertRowid as number };
+  },
+
+  // Buscar todos os lotes ativos
+  findAll(): SeedBatch[] {
+    const stmt = db.prepare(`
+      SELECT sb.*, gs.name as genetic_name, gs.breeder as genetic_breeder
+      FROM seed_batches sb
+      JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.is_active = 1
+      ORDER BY sb.created_at DESC
+    `);
+    return stmt.all() as SeedBatch[];
+  },
+
+  // Buscar lote por ID
+  findById(id: number): SeedBatch | undefined {
+    const stmt = db.prepare(`
+      SELECT sb.*, gs.name as genetic_name, gs.breeder as genetic_breeder
+      FROM seed_batches sb
+      JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.id = ? AND sb.is_active = 1
+    `);
+    return stmt.get(id) as SeedBatch | undefined;
+  },
+
+  // Buscar lotes disponíveis (com sementes restantes)
+  findAvailable(): SeedBatch[] {
+    const stmt = db.prepare(`
+      SELECT sb.*, gs.name as genetic_name, gs.breeder as genetic_breeder
+      FROM seed_batches sb
+      JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.is_active = 1 AND sb.current_quantity > 0
+      ORDER BY sb.created_at DESC
+    `);
+    return stmt.all() as SeedBatch[];
+  },
+
+  // Atualizar lote
+  update(id: number, batch: Partial<SeedBatch>): boolean {
+    const existing = this.findById(id);
+    if (!existing) return false;
+
+    const fields = [];
+    const values = [];
+
+    if (batch.batch_code !== undefined) { fields.push('batch_code = ?'); values.push(batch.batch_code); }
+    if (batch.source !== undefined) { fields.push('source = ?'); values.push(batch.source); }
+    if (batch.source_type !== undefined) { fields.push('source_type = ?'); values.push(batch.source_type); }
+    if (batch.acquisition_date !== undefined) { fields.push('acquisition_date = ?'); values.push(batch.acquisition_date); }
+    if (batch.initial_quantity !== undefined) { fields.push('initial_quantity = ?'); values.push(batch.initial_quantity); }
+    if (batch.current_quantity !== undefined) { fields.push('current_quantity = ?'); values.push(batch.current_quantity); }
+    if (batch.seed_type !== undefined) { fields.push('seed_type = ?'); values.push(batch.seed_type); }
+    if (batch.generation !== undefined) { fields.push('generation = ?'); values.push(batch.generation); }
+    if (batch.storage_location !== undefined) { fields.push('storage_location = ?'); values.push(batch.storage_location); }
+    if (batch.storage_conditions !== undefined) { fields.push('storage_conditions = ?'); values.push(batch.storage_conditions); }
+    if (batch.expiration_date !== undefined) { fields.push('expiration_date = ?'); values.push(batch.expiration_date); }
+    if (batch.germination_rate !== undefined) { fields.push('germination_rate = ?'); values.push(batch.germination_rate); }
+    if (batch.plants_generated !== undefined) { fields.push('plants_generated = ?'); values.push(batch.plants_generated); }
+    if (batch.notes !== undefined) { fields.push('notes = ?'); values.push(batch.notes); }
+    if (batch.is_active !== undefined) { fields.push('is_active = ?'); values.push(batch.is_active); }
+
+    if (fields.length === 0) return true;
+
+    fields.push('updated_at = datetime(\'now\', \'localtime\')');
+    values.push(id);
+
+    const stmt = db.prepare(`UPDATE seed_batches SET ${fields.join(', ')} WHERE id = ?`);
+    const info = stmt.run(...values);
+    return info.changes > 0;
+  },
+
+  // Decrementar quantidade de sementes
+  decrementQuantity(id: number, quantity: number = 1): boolean {
+    const stmt = db.prepare('UPDATE seed_batches SET current_quantity = current_quantity - ?, updated_at = datetime(\'now\', \'localtime\') WHERE id = ? AND current_quantity >= ?');
+    const info = stmt.run(quantity, id, quantity);
+    return info.changes > 0;
+  },
+
+  // Incrementar contador de plantas geradas
+  incrementPlantsGenerated(id: number, count: number = 1): boolean {
+    const stmt = db.prepare('UPDATE seed_batches SET plants_generated = plants_generated + ?, updated_at = datetime(\'now\', \'localtime\') WHERE id = ?');
+    const info = stmt.run(count, id);
+    return info.changes > 0;
+  },
+
+  // Deletar lote (soft delete)
+  delete(id: number): boolean {
+    const stmt = db.prepare('UPDATE seed_batches SET is_active = 0, updated_at = datetime(\'now\', \'localtime\') WHERE id = ?');
+    const info = stmt.run(id);
+    return info.changes > 0;
   }
 };

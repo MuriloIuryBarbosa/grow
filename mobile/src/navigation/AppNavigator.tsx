@@ -35,6 +35,7 @@ import NewCloneScreen from '../screens/NewCloneScreen';
 import ActivePlantsScreen from '../screens/ActivePlantsScreen';
 import DeadPlantsScreen from '../screens/DeadPlantsScreen';
 import GeneticMetricsScreen from '../screens/GeneticMetricsScreen';
+import BatchGerminationScreen from '../screens/BatchGerminationScreen';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.8;
@@ -57,6 +58,7 @@ export type RootStackParamList = {
   ActivePlants: undefined;
   DeadPlants: undefined;
   GeneticMetrics: undefined;
+  BatchGermination: undefined;
   Sensors: undefined;
 };
 
@@ -149,6 +151,11 @@ function CustomDrawer({ navigation, closeDrawer }: { navigation: any; closeDrawe
             icon="🧬"
             label="Banco Genético"
             onPress={() => navigateTo('GeneticBank')}
+          />
+          <MenuItem
+            icon="🌱"
+            label="Germinação em Lote"
+            onPress={() => navigateTo('BatchGermination')}
           />
           <MenuItem
             icon="📈"
@@ -404,6 +411,11 @@ export default function AppNavigator() {
             name="GeneticMetrics"
             component={GeneticMetricsScreen}
             options={{ title: 'Métricas Genéticas' }}
+          />
+          <Stack.Screen
+            name="BatchGermination"
+            component={BatchGerminationScreen}
+            options={{ title: 'Germinação em Lote' }}
           />
           <Stack.Screen
             name="Sensors"

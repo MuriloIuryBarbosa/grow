@@ -105,10 +105,6 @@ export default function NewPlantScreen({ navigation }: Props) {
       Alert.alert('Erro', 'O nome da planta é obrigatório');
       return false;
     }
-    if (!formData.code?.trim()) {
-      Alert.alert('Erro', 'O código/identificador é obrigatório');
-      return false;
-    }
     if (!formData.substrate) {
       Alert.alert('Erro', 'Selecione o substrato');
       return false;
@@ -196,16 +192,17 @@ export default function NewPlantScreen({ navigation }: Props) {
 
         {/* Código/Identificador */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Código/Identificador *</Text>
+          <Text style={styles.label}>Código/Identificador</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ex: VASO01, P001"
+            placeholder="Será gerado automaticamente (VASO001, VASO002...)"
             placeholderTextColor="#999"
             value={formData.code}
             onChangeText={(text) => updateField('code', text.toUpperCase())}
             autoCapitalize="characters"
+            editable={false}
           />
-          <Text style={styles.hint}>Identificador único para a planta</Text>
+          <Text style={styles.hint}>Código único gerado automaticamente</Text>
         </View>
 
         {/* Lote de Sementes */}

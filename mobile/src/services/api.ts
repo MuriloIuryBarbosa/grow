@@ -285,6 +285,17 @@ export const seedBatchesAPI = {
   delete: async (id: number) => {
     await api.delete(`/seed-batches/${id}`);
   },
+
+  germinate: async (id: number, germinationData: {
+    quantity: number;
+    substrate: string;
+    substrate_other?: string;
+    location?: string;
+    notes?: string;
+  }) => {
+    const { data } = await api.post(`/seed-batches/${id}/germinate`, germinationData);
+    return data;
+  },
 };
 
 // Clones API
