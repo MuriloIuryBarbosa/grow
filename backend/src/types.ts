@@ -89,3 +89,72 @@ export interface Statistics {
     floracao?: number;
   };
 }
+
+export interface GeneticStrain {
+  id?: number;
+  name: string;
+  breeder?: string;
+  description?: string;
+  type?: string;
+  indica_percentage?: number;
+  sativa_percentage?: number;
+  flowering_time?: number;
+  flowering_time_min?: number;
+  flowering_time_max?: number;
+  height_indoor?: number;
+  height_outdoor?: number;
+  yield_indoor?: number;
+  yield_outdoor?: number;
+  difficulty?: string;
+  thc_content?: number;
+  thc_percentage?: number;
+  cbd_content?: number;
+  cbd_percentage?: number;
+  flavors?: string[];
+  effects?: string[];
+  grow_notes?: string;
+  photo_path?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SeedBatch {
+  id?: number;
+  genetic_strain_id: number;
+  batch_code: string;
+  quantity_total: number;
+  quantity_available: number;
+  source?: string;
+  source_type?: string;
+  acquisition_date?: string;
+  purchase_date: string;
+  initial_quantity?: number;
+  current_quantity?: number;
+  seed_type?: string;
+  generation?: number;
+  storage_location?: string;
+  storage_conditions?: string;
+  expiration_date?: string;
+  price_per_unit?: number;
+  supplier?: string;
+  germination_rate?: number;
+  plants_generated?: number;
+  is_active?: boolean;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  // Campos calculados (JOIN com genetic_strains)
+  genetic_strain_name?: string;
+  genetic_breeder?: string;
+  genetic_name?: string;
+}
+
+export interface Clone {
+  id?: number;
+  plant_id: number;
+  clone_date: string;
+  quantity: number;
+  notes?: string;
+  created_at?: string;
+}

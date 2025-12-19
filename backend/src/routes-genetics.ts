@@ -637,4 +637,340 @@ router.get('/genetic-bank/stats', (req: Request, res: Response) => {
   }
 });
 
+// ===== SEED BATCHES (Lotes de Sementes) =====
+
+// Listar todos os lotes de sementes
+router.get('/seed-batches', (req: Request, res: Response) => {
+  try {
+    const { available_only } = req.query;
+    
+    let batches;
+    if (available_only === 'true') {
+      batches = db.prepare(`
+        SELECT 
+          sb.*,
+          gs.name as genetic_strain_name,
+          gs.breeder as genetic_breeder
+        FROM seed_batches sb
+        LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+        WHERE sb.is_active = 1 AND sb.current_quantity > 0
+        ORDER BY sb.created_at DESC
+      `).all();
+    } else {
+      batches = db.prepare(`
+        SELECT 
+          sb.*,
+          gs.name as genetic_strain_name,
+          gs.breeder as genetic_breeder
+        FROM seed_batches sb
+        LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+        ORDER BY sb.created_at DESC
+      `).all();
+    }
+    
+    res.json(batches);
+  } catch (error) {
+    console.error('Erro ao buscar lotes de sementes:', error);
+    res.status(500).json({ error: 'Erro ao buscar lotes de sementes' });
+  }
+});
+
+// Buscar lote por ID
+router.get('/seed-batches/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const batch = db.prepare(`
+      SELECT 
+        sb.*,
+        gs.name as genetic_strain_name,
+        gs.breeder as genetic_breeder
+      FROM seed_batches sb
+      LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.id = ?
+    `).get(id);
+    
+    if (!batch) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    res.json(batch);
+  } catch (error) {
+    console.error('Erro ao buscar lote:', error);
+    res.status(500).json({ error: 'Erro ao buscar lote' });
+  }
+});
+
+// Criar novo lote de sementes
+router.post('/seed-batches', (req: Request, res: Response) => {
+  try {
+    const batchData = req.body;
+    const batch = db.prepare(`
+      INSERT INTO seed_batches (
+        genetic_strain_id, batch_code, quantity_total, quantity_available,
+        source, source_type, acquisition_date, purchase_date, initial_quantity,
+        current_quantity, seed_type, generation, storage_location,
+        storage_conditions, expiration_date, price_per_unit, supplier,
+        germination_rate, plants_generated, is_active, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      batchData.genetic_strain_id,
+      batchData.batch_code,
+      batchData.quantity_total,
+      batchData.quantity_available || batchData.quantity_total,
+      batchData.source,
+      batchData.source_type || 'purchased',
+      batchData.acquisition_date,
+      batchData.purchase_date,
+      batchData.initial_quantity || batchData.quantity_total,
+      batchData.current_quantity || batchData.quantity_total,
+      batchData.seed_type || 'regular',
+      batchData.generation || null,
+      batchData.storage_location || null,
+      batchData.storage_conditions || null,
+      batchData.expiration_date,
+      batchData.price_per_unit,
+      batchData.supplier,
+      batchData.germination_rate || null,
+      batchData.plants_generated || 0,
+      batchData.is_active !== undefined ? batchData.is_active : true,
+      batchData.notes
+    );
+    
+    const created = db.prepare(`
+      SELECT 
+        sb.*,
+        gs.name as genetic_strain_name,
+        gs.breeder as genetic_breeder
+      FROM seed_batches sb
+      LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.id = ?
+    `).get(batch.lastInsertRowid);
+    
+    res.status(201).json(created);
+  } catch (error: any) {
+    console.error('Erro ao criar lote:', error);
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'Já existe um lote com este código' });
+    } else {
+      res.status(500).json({ error: 'Erro ao criar lote' });
+    }
+  }
+});
+
+// Atualizar lote
+router.put('/seed-batches/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const batchData = req.body;
+    
+    const fields = [];
+    const values = [];
+    
+    if (batchData.genetic_strain_id !== undefined) { fields.push('genetic_strain_id = ?'); values.push(batchData.genetic_strain_id); }
+    if (batchData.batch_code !== undefined) { fields.push('batch_code = ?'); values.push(batchData.batch_code); }
+    if (batchData.quantity_total !== undefined) { fields.push('quantity_total = ?'); values.push(batchData.quantity_total); }
+    if (batchData.quantity_available !== undefined) { fields.push('quantity_available = ?'); values.push(batchData.quantity_available); }
+    if (batchData.source !== undefined) { fields.push('source = ?'); values.push(batchData.source); }
+    if (batchData.source_type !== undefined) { fields.push('source_type = ?'); values.push(batchData.source_type); }
+    if (batchData.acquisition_date !== undefined) { fields.push('acquisition_date = ?'); values.push(batchData.acquisition_date); }
+    if (batchData.purchase_date !== undefined) { fields.push('purchase_date = ?'); values.push(batchData.purchase_date); }
+    if (batchData.initial_quantity !== undefined) { fields.push('initial_quantity = ?'); values.push(batchData.initial_quantity); }
+    if (batchData.current_quantity !== undefined) { fields.push('current_quantity = ?'); values.push(batchData.current_quantity); }
+    if (batchData.seed_type !== undefined) { fields.push('seed_type = ?'); values.push(batchData.seed_type); }
+    if (batchData.generation !== undefined) { fields.push('generation = ?'); values.push(batchData.generation); }
+    if (batchData.storage_location !== undefined) { fields.push('storage_location = ?'); values.push(batchData.storage_location); }
+    if (batchData.storage_conditions !== undefined) { fields.push('storage_conditions = ?'); values.push(batchData.storage_conditions); }
+    if (batchData.expiration_date !== undefined) { fields.push('expiration_date = ?'); values.push(batchData.expiration_date); }
+    if (batchData.price_per_unit !== undefined) { fields.push('price_per_unit = ?'); values.push(batchData.price_per_unit); }
+    if (batchData.supplier !== undefined) { fields.push('supplier = ?'); values.push(batchData.supplier); }
+    if (batchData.germination_rate !== undefined) { fields.push('germination_rate = ?'); values.push(batchData.germination_rate); }
+    if (batchData.plants_generated !== undefined) { fields.push('plants_generated = ?'); values.push(batchData.plants_generated); }
+    if (batchData.is_active !== undefined) { fields.push('is_active = ?'); values.push(batchData.is_active); }
+    if (batchData.notes !== undefined) { fields.push('notes = ?'); values.push(batchData.notes); }
+    
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+    }
+    
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    
+    const query = `UPDATE seed_batches SET ${fields.join(', ')} WHERE id = ?`;
+    values.push(id);
+    
+    const result = db.prepare(query).run(...values);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    const updated = db.prepare(`
+      SELECT 
+        sb.*,
+        gs.name as genetic_strain_name,
+        gs.breeder as genetic_breeder
+      FROM seed_batches sb
+      LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.id = ?
+    `).get(id);
+    
+    res.json(updated);
+  } catch (error: any) {
+    console.error('Erro ao atualizar lote:', error);
+    if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      res.status(409).json({ error: 'Já existe um lote com este código' });
+    } else {
+      res.status(500).json({ error: 'Erro ao atualizar lote' });
+    }
+  }
+});
+
+// Atualizar quantidade de sementes
+router.patch('/seed-batches/:id/quantity', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { quantity_available } = req.body;
+    
+    if (quantity_available === undefined || quantity_available < 0) {
+      return res.status(400).json({ error: 'Quantidade deve ser maior ou igual a 0' });
+    }
+    
+    const result = db.prepare(`
+      UPDATE seed_batches 
+      SET quantity_available = ?, updated_at = ? 
+      WHERE id = ?
+    `).run(quantity_available, new Date().toISOString(), id);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    res.json({ message: 'Quantidade atualizada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar quantidade:', error);
+    res.status(500).json({ error: 'Erro ao atualizar quantidade' });
+  }
+});
+
+// Deletar lote
+router.delete('/seed-batches/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const result = db.prepare('DELETE FROM seed_batches WHERE id = ?').run(id);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    res.json({ message: 'Lote removido com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar lote:', error);
+    res.status(500).json({ error: 'Erro ao deletar lote' });
+  }
+});
+
+// ===== GERMINAÇÃO EM LOTE =====
+
+// Germinar sementes em lote
+router.post('/seed-batches/:id/germinate', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { quantity, substrate, substrate_other, location, notes } = req.body;
+    
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ error: 'Quantidade deve ser maior que 0' });
+    }
+    
+    // Verificar se o lote existe e tem sementes suficientes
+    const batch = db.prepare(`
+      SELECT 
+        sb.*,
+        gs.name as genetic_name
+      FROM seed_batches sb
+      LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+      WHERE sb.id = ?
+    `).get(id) as any;
+    
+    if (!batch) {
+      return res.status(404).json({ error: 'Lote não encontrado' });
+    }
+    
+    if ((batch.current_quantity || 0) < quantity) {
+      return res.status(400).json({ error: `Lote tem apenas ${batch.current_quantity || 0} sementes disponíveis` });
+    }
+    
+    const createdPlants = [];
+    const plantingDate = new Date().toISOString().split('T')[0];
+    
+    // Criar plantas em lote
+    for (let i = 0; i < quantity; i++) {
+      const code = (db.prepare('SELECT COALESCE(MAX(CAST(SUBSTR(code, 5) AS INTEGER)), 0) + 1 as next_code FROM plants').get() as any).next_code;
+      const plantCode = `VASO${String(code).padStart(3, '0')}`;
+      
+      const plant = db.prepare(`
+        INSERT INTO plants (
+          name, genetic, code, planting_date, germination_date, days_to_germination,
+          substrate, substrate_other, current_phase, current_location, status,
+          failure_date, failure_reason, photo_path, profile_photo,
+          seed_batch_id, source_clone_id, origin_type, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        `${batch.genetic_name} #${i + 1}`,
+        batch.genetic_name,
+        plantCode,
+        plantingDate,
+        null,
+        null,
+        substrate || 'Terra vegetal',
+        substrate_other || null,
+        'germinacao',
+        location || null,
+        'ativa',
+        null,
+        null,
+        null,
+        null,
+        batch.id,
+        null,
+        'seed',
+        new Date().toISOString()
+      );
+      
+      const createdPlant = db.prepare(`
+        SELECT 
+          p.*,
+          sb.batch_code as seed_batch_code,
+          gs.name as genetic_strain_name,
+          gs.breeder as genetic_breeder
+        FROM plants p
+        LEFT JOIN seed_batches sb ON p.seed_batch_id = sb.id
+        LEFT JOIN genetic_strains gs ON sb.genetic_strain_id = gs.id
+        WHERE p.id = ?
+      `).get(plant.lastInsertRowid);
+      
+      createdPlants.push(createdPlant);
+    }
+    
+    // Decrementar quantidade de sementes no lote
+    db.prepare(`
+      UPDATE seed_batches 
+      SET current_quantity = current_quantity - ?, 
+          plants_generated = COALESCE(plants_generated, 0) + ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(quantity, quantity, new Date().toISOString(), id);
+    
+    res.json({
+      message: `${quantity} plantas criadas com sucesso`,
+      plants: createdPlants,
+      batch_code: batch.batch_code
+    });
+  } catch (error) {
+    console.error('Erro ao germinar sementes:', error);
+    res.status(500).json({ error: 'Erro ao germinar sementes' });
+  }
+});
+
 export default router;
