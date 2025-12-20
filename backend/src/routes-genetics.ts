@@ -18,7 +18,10 @@ router.get('/genetics', (req: Request, res: Response) => {
         (SELECT COALESCE(SUM(current_quantity), 0) FROM seed_batches WHERE genetic_strain_id = gs.id AND is_active = 1) as total_seeds,
         (SELECT COUNT(*) FROM plants p 
          INNER JOIN seed_batches sb ON p.seed_batch_id = sb.id 
-         WHERE sb.genetic_strain_id = gs.id) as total_plants
+         WHERE sb.genetic_strain_id = gs.id) as total_plants,
+        (SELECT COUNT(*) FROM plants p 
+         INNER JOIN seed_batches sb ON p.seed_batch_id = sb.id 
+         WHERE sb.genetic_strain_id = gs.id AND p.status = 'morta') as dead_plants
       FROM genetic_strains gs
     `;
     

@@ -963,4 +963,36 @@ router.post('/seed-batches/:id/germinate', (req: Request, res: Response) => {
   }
 });
 
+// ===== ROTAS DE ESTATÍSTICAS =====
+
+// Métricas genéticas
+router.get('/statistics/genetic-metrics', (req: Request, res: Response) => {
+  try {
+    // Query simplificada primeiro
+    const query = `
+      SELECT
+        gs.id,
+        gs.name as genetic_name,
+        gs.breeder,
+        COUNT(DISTINCT p.id) as total_plants,
+        COUNT(DISTINCT CASE WHEN p.status = 'ativa' THEN p.id END) as active_plants,
+        COUNT(DISTINCT CASE WHEN p.status = 'morta' THEN p.id END) as dead_plants,
+        COUNT(DISTINCT CASE WHEN p.status = 'colhida' THEN p.id END) as harvested_plants,
+        gs.genetic_id
+      FROM genetic_strains gs
+      LEFT JOIN seed_batches sb ON gs.id = sb.genetic_strain_id AND sb.is_active = 1
+      LEFT JOIN plants p ON sb.id = p.seed_batch_id
+      WHERE gs.is_active = 1
+      GROUP BY gs.id, gs.name, gs.breeder, gs.genetic_id
+      ORDER BY total_plants DESC, gs.name ASC
+    `;
+
+    const metrics = db.prepare(query).all();
+    res.json(metrics);
+  } catch (error) {
+    console.error('Erro ao buscar métricas genéticas:', error);
+    res.status(500).json({ error: 'Erro ao buscar métricas genéticas', details: error.message });
+  }
+});
+
 export default router;
