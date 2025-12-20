@@ -62,28 +62,58 @@ export default function GeneticBankScreen({ navigation }: Props) {
     loadData();
   };
 
-  const renderStats = () => (
-    <View style={styles.statsContainer}>
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats?.total_genetics || 0}</Text>
-          <Text style={styles.statLabel}>Genéticas</Text>
+  const renderStats = () => {
+    // Calcular taxa de sucesso média das genéticas
+    const geneticsWithPlants = genetics.filter(g => (g.total_plants || 0) > 0);
+    const totalPlants = geneticsWithPlants.reduce((sum, g) => sum + (g.total_plants || 0), 0);
+    const totalDeadPlants = geneticsWithPlants.reduce((sum, g) => sum + (g.dead_plants || 0), 0);
+    
+    const averageSuccessRate = totalPlants > 0 ? Math.round(((totalPlants - totalDeadPlants) / totalPlants) * 100) : 0;
+
+    return (
+      <View style={styles.statsContainer}>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats?.total_genetics || 0}</Text>
+            <Text style={styles.statLabel}>Genéticas</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats?.total_batches || 0}</Text>
+            <Text style={styles.statLabel}>Lotes</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats?.total_seeds_available || 0}</Text>
+            <Text style={styles.statLabel}>Sementes</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats?.clones?.total || 0}</Text>
+            <Text style={styles.statLabel}>Clones</Text>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats?.total_batches || 0}</Text>
-          <Text style={styles.statLabel}>Lotes</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats?.total_seeds_available || 0}</Text>
-          <Text style={styles.statLabel}>Sementes</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats?.clones?.total || 0}</Text>
-          <Text style={styles.statLabel}>Clones</Text>
+        
+        {/* Dashboard de Sucesso */}
+        <View style={styles.successDashboard}>
+          <Text style={styles.dashboardTitle}>📊 Taxa de Sucesso das Genéticas</Text>
+          <View style={styles.successStats}>
+            <View style={styles.successCard}>
+              <Text style={styles.successValue}>{averageSuccessRate}%</Text>
+              <Text style={styles.successLabel}>Taxa Média de Sucesso</Text>
+              <Text style={styles.successSubtext}>
+                Baseado em {geneticsWithPlants.length} genéticas com plantas
+              </Text>
+            </View>
+            <View style={styles.successCard}>
+              <Text style={styles.successValue}>{totalPlants}</Text>
+              <Text style={styles.successLabel}>Total de Plantas</Text>
+              <Text style={styles.successSubtext}>
+                {totalDeadPlants} mortas • {totalPlants - totalDeadPlants} ativas
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderGeneticItem = ({ item }: { item: GeneticStrain }) => (
     <TouchableOpacity
@@ -535,5 +565,56 @@ const styles = StyleSheet.create({
   fabText: {
     fontSize: 28,
     color: '#fff',
+  },
+  successDashboard: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  dashboardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2d5016',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  successStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  successCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  successValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#2d5016',
+    marginBottom: 4,
+  },
+  successLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  successSubtext: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 14,
   },
 });

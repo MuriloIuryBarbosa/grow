@@ -9,6 +9,9 @@ import ErrorMessage from '../components/ErrorMessage';
 import EmptyState from '../components/EmptyState';
 import Pagination from '../components/Pagination';
 import Filters from '../components/Filters';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -92,53 +95,47 @@ export default function Home() {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2>🌱 Grow System</h2>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-outline btn-small" onClick={() => navigate('/sensors')}>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">🌱 Grow System</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigate('/sensors')}>
             ⚙️ Sensores
-          </button>
-          <button className="btn btn-outline btn-small" onClick={() => navigate('/record-reading')}>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/record-reading')}>
             📊 Registrar Leitura
-          </button>
-          <button className="btn btn-primary" onClick={() => navigate('/new')}>
+          </Button>
+          <Button onClick={() => navigate('/new')}>
             ➕ Nova Planta
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ marginBottom: '2rem', borderBottom: '2px solid #eee' }}>
-        <button 
-          className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
+      <div className="mb-8 border-b-2 border-gray-200">
+        <Button
+          variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
+          size="lg"
           onClick={() => handleTabChange('dashboard')}
-          style={{
-            padding: '1rem 2rem',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'dashboard' ? '3px solid var(--primary)' : 'none',
-            fontWeight: activeTab === 'dashboard' ? 'bold' : 'normal',
-            color: activeTab === 'dashboard' ? 'var(--primary)' : 'var(--text-light)',
-          }}
+          className={`rounded-none border-b-2 ${
+            activeTab === 'dashboard'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent'
+          }`}
         >
           📊 Dashboard
-        </button>
-        <button 
-          className={`tab-button ${activeTab === 'plants' ? 'active' : ''}`}
+        </Button>
+        <Button
+          variant={activeTab === 'plants' ? 'default' : 'ghost'}
+          size="lg"
           onClick={() => handleTabChange('plants')}
-          style={{
-            padding: '1rem 2rem',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'plants' ? '3px solid var(--primary)' : 'none',
-            fontWeight: activeTab === 'plants' ? 'bold' : 'normal',
-            color: activeTab === 'plants' ? 'var(--primary)' : 'var(--text-light)',
-          }}
+          className={`rounded-none border-b-2 ml-4 ${
+            activeTab === 'plants'
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent'
+          }`}
         >
           🌱 Minhas Plantas ({showDead ? deadPlants.length : activePlants.length})
-        </button>
+        </Button>
       </div>
 
       {activeTab === 'dashboard' ? (
@@ -146,52 +143,66 @@ export default function Home() {
       ) : (
         <>
           <div className="stats">
-            <div className="stat-card">
-              <div className="stat-label">Total de Plantas</div>
-              <div className="stat-value">{plants.length}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Plantas Ativas</div>
-              <div className="stat-value">{activePlants.length}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Germinação</div>
-              <div className="stat-value">{stats.germinacao}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Muda</div>
-              <div className="stat-value">{stats.muda}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Vegetativa</div>
-              <div className="stat-value">{stats.vegetacao}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Floração</div>
-              <div className="stat-value">{stats.floracao}</div>
-            </div>
+            <Card>
+              <CardContent className="text-center p-4">
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Total de Plantas</div>
+                <div className="text-3xl font-bold text-primary-600 mt-1">{plants.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="text-center p-4">
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Plantas Ativas</div>
+                <div className="text-3xl font-bold text-primary-600 mt-1">{activePlants.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="text-center p-4">
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Germinação</div>
+                <div className="text-3xl font-bold text-primary-600 mt-1">{stats.germinacao}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="text-center p-4">
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Muda</div>
+                <div className="text-3xl font-bold text-primary-600 mt-1">{stats.muda}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="text-center p-4">
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Vegetativa</div>
+                <div className="text-3xl font-bold text-primary-600 mt-1">{stats.vegetacao}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="text-center p-4">
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Floração</div>
+                <div className="text-3xl font-bold text-primary-600 mt-1">{stats.floracao}</div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <button 
-              className={`btn ${!showDead ? 'btn-primary' : 'btn-outline'} btn-small`}
+          <div className="mb-4">
+            <Button
+              variant={!showDead ? 'default' : 'outline'}
+              size="sm"
               onClick={() => {
                 setShowDead(false);
                 setCurrentPage(1);
               }}
-              style={{ marginRight: '0.5rem' }}
+              className="mr-2"
             >
               🌱 Ativas ({activePlants.length})
-            </button>
-            <button 
-              className={`btn ${showDead ? 'btn-primary' : 'btn-outline'} btn-small`}
+            </Button>
+            <Button
+              variant={showDead ? 'default' : 'outline'}
+              size="sm"
               onClick={() => {
                 setShowDead(true);
                 setCurrentPage(1);
               }}
             >
               💀 Mortas ({deadPlants.length})
-            </button>
+            </Button>
           </div>
 
           {/* Filtros */}
@@ -205,10 +216,10 @@ export default function Home() {
           />
 
           {/* Informações de paginação */}
-          <div style={{ marginBottom: '1rem', fontSize: '0.875rem', color: 'var(--text-light)' }}>
+          <div className="mb-4 text-sm text-gray-500">
             Mostrando {startIndex + 1}-{Math.min(endIndex, filteredPlants.length)} de {filteredPlants.length} plantas
             {(selectedPhase || selectedGenetic) && (
-              <span style={{ marginLeft: '1rem' }}>
+              <span className="ml-4">
                 (filtrado de {showDead ? deadPlants.length : activePlants.length} plantas)
               </span>
             )}

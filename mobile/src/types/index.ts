@@ -45,6 +45,7 @@ export interface GeneticStrain {
   active_batches?: number;
   total_seeds?: number;
   total_plants?: number;
+  dead_plants?: number;
 }
 
 // Seed Batch - Lote de sementes

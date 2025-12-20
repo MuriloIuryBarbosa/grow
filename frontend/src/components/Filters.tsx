@@ -1,4 +1,6 @@
+import React from 'react';
 import { Genetic } from '../hooks/useGenetics';
+import { Select, Button } from './ui';
 
 interface FiltersProps {
   selectedPhase: string;
@@ -9,7 +11,7 @@ interface FiltersProps {
   onClearFilters: () => void;
 }
 
-const phases = [
+const phases: Array<{ value: string; label: string }> = [
   { value: '', label: 'Todas as fases' },
   { value: 'germinacao', label: '🌱 Germinação' },
   { value: 'muda', label: '🌿 Muda' },
@@ -28,28 +30,32 @@ export default function Filters({
   const hasActiveFilters = selectedPhase || selectedGenetic;
 
   return (
-    <div className="filters">
-      <div className="filter-group">
-        <label className="filter-label">Fase da Planta</label>
-        <select
-          className="filter-select"
+    <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-50 rounded-lg border">
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Fase da Planta
+        </label>
+        <Select
           value={selectedPhase}
           onChange={(e) => onPhaseChange(e.target.value)}
+          className="w-full"
         >
           {phases.map((phase) => (
             <option key={phase.value} value={phase.value}>
               {phase.label}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div className="filter-group">
-        <label className="filter-label">Genética</label>
-        <select
-          className="filter-select"
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Genética
+        </label>
+        <Select
           value={selectedGenetic}
           onChange={(e) => onGeneticChange(e.target.value)}
+          className="w-full"
         >
           <option value="">Todas as genéticas</option>
           {genetics.map((genetic) => (
@@ -57,17 +63,20 @@ export default function Filters({
               {genetic.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {hasActiveFilters && (
-        <button
-          className="btn btn-outline btn-small"
-          onClick={onClearFilters}
-          style={{ alignSelf: 'flex-end' }}
-        >
-          🗑️ Limpar Filtros
-        </button>
+        <div className="flex items-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearFilters}
+            className="whitespace-nowrap"
+          >
+            🗑️ Limpar Filtros
+          </Button>
+        </div>
       )}
     </div>
   );

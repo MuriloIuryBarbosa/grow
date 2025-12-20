@@ -1,3 +1,6 @@
+import React from 'react';
+import { Button } from './ui';
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -7,10 +10,10 @@ interface PaginationProps {
 export default function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  const getVisiblePages = () => {
+  const getVisiblePages = (): (number | string)[] => {
     const delta = 2;
-    const range = [];
-    const rangeWithDots = [];
+    const range: (number | string)[] = [];
+    const rangeWithDots: (number | string)[] = [];
 
     for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
       range.push(i);
@@ -34,33 +37,39 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
   };
 
   return (
-    <div className="pagination">
-      <button
-        className="pagination-btn"
+    <div className="flex items-center justify-center gap-2 mt-8 flex-wrap">
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
+        className="px-3"
       >
         ‹ Anterior
-      </button>
+      </Button>
 
       {getVisiblePages().map((page, index) => (
-        <button
+        <Button
           key={index}
-          className={`pagination-btn ${page === currentPage ? 'active' : ''}`}
+          variant={page === currentPage ? 'default' : 'outline'}
+          size="sm"
           onClick={() => typeof page === 'number' && onPageChange(page)}
           disabled={typeof page !== 'number'}
+          className="min-w-[40px] px-3"
         >
           {page}
-        </button>
+        </Button>
       ))}
 
-      <button
-        className="pagination-btn"
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
+        className="px-3"
       >
         Próximo ›
-      </button>
+      </Button>
     </div>
   );
 }

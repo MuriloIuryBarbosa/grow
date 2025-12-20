@@ -57,7 +57,6 @@ export type RootStackParamList = {
   NewClone: { motherId?: number; motherName?: string; editId?: number };
   ActivePlants: undefined;
   DeadPlants: undefined;
-  GeneticMetrics: undefined;
   BatchGermination: undefined;
   Sensors: undefined;
 };
@@ -156,11 +155,6 @@ function CustomDrawer({ navigation, closeDrawer }: { navigation: any; closeDrawe
             icon="🌱"
             label="Germinação em Lote"
             onPress={() => navigateTo('BatchGermination')}
-          />
-          <MenuItem
-            icon="📈"
-            label="Métricas Genéticas"
-            onPress={() => navigateTo('GeneticMetrics')}
           />
         </View>
 
