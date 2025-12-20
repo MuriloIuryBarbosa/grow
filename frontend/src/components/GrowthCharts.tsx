@@ -1,6 +1,5 @@
 import { DailyRecord, Plant } from '../types';
 import { format, differenceInDays, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { memo, useMemo, useState } from 'react';
 import { parseDate } from '../utils/date.utils';
 
@@ -490,7 +489,6 @@ function GrowthCharts({ records, plant }: GrowthChartsProps) {
               </h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
                 {dailyAverages.filter(r => r.temperature || r.humidity).map((avg, idx) => {
-                  const day = differenceInDays(parseDate(avg.record_date), parseDate(plant.germination_date!));
                   const date = format(parseDate(avg.record_date), 'dd/MM');
                   return (
                     <div key={idx} style={{ background: 'var(--bg)', padding: '0.75rem', borderRadius: '8px' }}>

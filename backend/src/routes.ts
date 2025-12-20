@@ -290,7 +290,8 @@ router.get('/statistics/genetics', (req: Request, res: Response) => {
           ELSE NULL 
         END as germination_rate
       FROM genetic_strains gs
-      LEFT JOIN plants p ON p.genetic_id = gs.id
+      LEFT JOIN seed_batches sb ON gs.id = sb.genetic_strain_id AND sb.is_active = 1
+      LEFT JOIN plants p ON sb.id = p.seed_batch_id
       WHERE gs.is_active = 1
       GROUP BY gs.id
       ORDER BY 
@@ -310,7 +311,8 @@ router.get('/statistics/genetics', (req: Request, res: Response) => {
           COUNT(DISTINCT p.id) as plants_with_history
         FROM phase_history ph
         JOIN plants p ON ph.plant_id = p.id
-        WHERE p.genetic_id = ?
+        JOIN seed_batches sb ON p.seed_batch_id = sb.id
+        WHERE sb.genetic_strain_id = ?
           AND ph.duration_days IS NOT NULL 
           AND ph.duration_days > 0
       `).get(genetic.id) as any;
@@ -322,7 +324,8 @@ router.get('/statistics/genetics', (req: Request, res: Response) => {
           AVG(dr.plant_size) as avg_height
         FROM daily_records dr
         JOIN plants p ON dr.plant_id = p.id
-        WHERE p.genetic_id = ?
+        JOIN seed_batches sb ON p.seed_batch_id = sb.id
+        WHERE sb.genetic_strain_id = ?
           AND dr.plant_size IS NOT NULL
       `).get(genetic.id) as any;
 

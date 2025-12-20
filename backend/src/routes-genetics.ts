@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import db from './database';
+import { PlantModel } from './models';
 
 const router = express.Router();
 
@@ -906,16 +907,15 @@ router.post('/seed-batches/:id/germinate', (req: Request, res: Response) => {
     
     // Criar plantas em lote
     for (let i = 0; i < quantity; i++) {
-      const code = (db.prepare('SELECT COALESCE(MAX(CAST(SUBSTR(code, 5) AS INTEGER)), 0) + 1 as next_code FROM plants').get() as any).next_code;
-      const plantCode = `VASO${String(code).padStart(3, '0')}`;
+      // Gerar código único para a planta usando a lógica padronizada
+      const plantCode = PlantModel.generateNextCode();
       
       const plant = db.prepare(`
         INSERT INTO plants (
           name, genetic, code, planting_date, germination_date, days_to_germination,
           substrate, substrate_other, current_phase, current_location, status,
-          failure_date, failure_reason, photo_path, profile_photo,
-          seed_batch_id, source_clone_id, origin_type, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          failure_date, failure_reason, photo_path, seed_batch_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         `${batch.genetic_name} #${i + 1}`,
         batch.genetic_name,
@@ -931,10 +931,8 @@ router.post('/seed-batches/:id/germinate', (req: Request, res: Response) => {
         null,
         null,
         null,
-        null,
         batch.id,
-        null,
-        'seed',
+        new Date().toISOString(),
         new Date().toISOString()
       );
       
@@ -970,6 +968,76 @@ router.post('/seed-batches/:id/germinate', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Erro ao germinar sementes:', error);
     res.status(500).json({ error: 'Erro ao germinar sementes' });
+  }
+});
+
+// ===== ESTATÍSTICAS DE GENÉTICAS =====
+
+// Métricas detalhadas de genéticas
+router.get('/statistics/genetic-metrics', (req: Request, res: Response) => {
+  try {
+    const query = `
+      SELECT 
+        gs.id as genetic_id,
+        gs.name as genetic_name,
+        gs.breeder,
+        
+        -- Contagem total de plantas
+        COUNT(p.id) as total_plants,
+        
+        -- Plantas ativas
+        COUNT(CASE WHEN p.status = 'ativa' THEN 1 END) as active_plants,
+        
+        -- Plantas germinadas (têm data de germinação)
+        COUNT(CASE WHEN p.germination_date IS NOT NULL THEN 1 END) as germinated_plants,
+        
+        -- Plantas mortas
+        COUNT(CASE WHEN p.status = 'morta' THEN 1 END) as dead_plants,
+        
+        -- Plantas colhidas
+        COUNT(CASE WHEN p.status = 'colhida' THEN 1 END) as harvested_plants,
+        
+        -- Taxa de germinação
+        ROUND(
+          (COUNT(CASE WHEN p.germination_date IS NOT NULL THEN 1 END) * 100.0) / 
+          NULLIF(COUNT(p.id), 0), 
+          1
+        ) as germination_rate,
+        
+        -- Total de lotes
+        COUNT(DISTINCT sb.id) as total_batches,
+        
+        -- Total de sementes disponíveis
+        COALESCE(SUM(sb.current_quantity), 0) as total_seeds_available,
+        
+        -- Última atividade
+        MAX(COALESCE(p.created_at, sb.created_at, gs.created_at)) as last_activity,
+        
+        -- Score de sucesso (baseado em germinação e sobrevivência)
+        ROUND(
+          (
+            (COUNT(CASE WHEN p.germination_date IS NOT NULL THEN 1 END) * 100.0 / NULLIF(COUNT(p.id), 0)) * 0.5 +
+            (COUNT(CASE WHEN p.status = 'ativa' THEN 1 END) * 100.0 / NULLIF(COUNT(p.id), 0)) * 0.3 +
+            (COUNT(CASE WHEN p.status = 'colhida' THEN 1 END) * 100.0 / NULLIF(COUNT(p.id), 0)) * 0.2
+          ), 
+          1
+        ) as success_score
+        
+      FROM genetic_strains gs
+      LEFT JOIN seed_batches sb ON gs.id = sb.genetic_strain_id AND sb.is_active = 1
+      LEFT JOIN plants p ON sb.id = p.seed_batch_id
+      
+      WHERE gs.is_active = 1
+      
+      GROUP BY gs.id, gs.name, gs.breeder
+      ORDER BY success_score DESC, total_plants DESC
+    `;
+    
+    const metrics = db.prepare(query).all();
+    res.json(metrics);
+  } catch (error) {
+    console.error('Erro ao buscar métricas de genéticas:', error);
+    res.status(500).json({ error: 'Erro ao buscar métricas de genéticas' });
   }
 });
 

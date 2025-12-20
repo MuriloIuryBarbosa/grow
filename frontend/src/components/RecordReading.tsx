@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { sensorsAPI, readingsAPI } from '../services/api';
 import { Sensor } from '../types';
-import { format } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import '../styles/sensors.css';
 

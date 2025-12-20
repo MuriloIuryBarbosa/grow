@@ -67,21 +67,21 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
   const renderGeneticCard = ({ item }: { item: GeneticMetrics }) => (
     <TouchableOpacity 
       style={styles.card}
-      onPress={() => navigation.navigate('GeneticDetail', { id: item.id })}
+      onPress={() => navigation.navigate('GeneticDetail', { id: item.genetic_id })}
     >
       {/* Header com nome e score */}
       <View style={styles.cardHeader}>
         <View style={styles.geneticInfo}>
-          <Text style={styles.geneticName}>{item.name}</Text>
+          <Text style={styles.geneticName}>{item.genetic_name}</Text>
           {item.breeder && (
             <Text style={styles.breeder}>{item.breeder}</Text>
           )}
         </View>
-        <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(item.quality_score) }]}>
+        <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(item.success_score) }]}>
           <Text style={styles.scoreValue}>
-            {item.quality_score !== null ? item.quality_score : '-'}
+            {item.success_score !== null ? item.success_score : '-'}
           </Text>
-          <Text style={styles.scoreLabel}>{getScoreLabel(item.quality_score)}</Text>
+          <Text style={styles.scoreLabel}>{getScoreLabel(item.success_score)}</Text>
         </View>
       </View>
 
@@ -100,31 +100,13 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
           <Text style={styles.metricLabel}>Mortas</Text>
         </View>
         <View style={styles.metricItem}>
-          <Text style={[styles.metricValue, { color: '#FF9800' }]}>{item.germination_failures}</Text>
-          <Text style={styles.metricLabel}>Falha Germ.</Text>
+          <Text style={[styles.metricValue, { color: '#FF9800' }]}>{item.harvested_plants}</Text>
+          <Text style={styles.metricLabel}>Colhidas</Text>
         </View>
       </View>
 
       {/* Taxas */}
       <View style={styles.ratesContainer}>
-        <View style={styles.rateItem}>
-          <Text style={styles.rateLabel}>Taxa de Sucesso</Text>
-          <View style={styles.rateBar}>
-            <View 
-              style={[
-                styles.rateProgress, 
-                { 
-                  width: `${item.success_rate || 0}%`,
-                  backgroundColor: getScoreColor(item.success_rate)
-                }
-              ]} 
-            />
-          </View>
-          <Text style={styles.rateValue}>
-            {item.success_rate !== null ? `${item.success_rate}%` : '-'}
-          </Text>
-        </View>
-        
         <View style={styles.rateItem}>
           <Text style={styles.rateLabel}>Taxa de Germinação</Text>
           <View style={styles.rateBar}>
@@ -144,67 +126,57 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {/* Evolução */}
-      {item.evolution.avg_phase_duration && (
+      {/* Tempos médios */}
+      {(item.avg_germination_days || item.avg_vegetation_days || item.avg_flowering_days) && (
         <View style={styles.evolutionContainer}>
-          <Text style={styles.sectionTitle}>Velocidade de Evolução</Text>
+          <Text style={styles.sectionTitle}>Tempos Médios (dias)</Text>
           <View style={styles.evolutionRow}>
-            <View style={styles.evolutionItem}>
-              <Text style={styles.evolutionValue}>
-                {item.evolution.avg_phase_duration}
-              </Text>
-              <Text style={styles.evolutionLabel}>Média (dias/fase)</Text>
-            </View>
-            <View style={styles.evolutionItem}>
-              <Text style={[styles.evolutionValue, { color: '#4CAF50' }]}>
-                {item.evolution.min_phase_duration || '-'}
-              </Text>
-              <Text style={styles.evolutionLabel}>Mínimo</Text>
-            </View>
-            <View style={styles.evolutionItem}>
-              <Text style={[styles.evolutionValue, { color: '#f44336' }]}>
-                {item.evolution.max_phase_duration || '-'}
-              </Text>
-              <Text style={styles.evolutionLabel}>Máximo</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* Crescimento */}
-      {item.growth.max_height && (
-        <View style={styles.growthContainer}>
-          <Text style={styles.sectionTitle}>Crescimento</Text>
-          <View style={styles.growthRow}>
-            <Text style={styles.growthText}>
-              Altura máx: <Text style={styles.growthValue}>{item.growth.max_height}cm</Text>
-            </Text>
-            {item.growth.avg_height && (
-              <Text style={styles.growthText}>
-                Média: <Text style={styles.growthValue}>{item.growth.avg_height}cm</Text>
-              </Text>
+            {item.avg_germination_days && (
+              <View style={styles.evolutionItem}>
+                <Text style={styles.evolutionValue}>
+                  {item.avg_germination_days}
+                </Text>
+                <Text style={styles.evolutionLabel}>Germinação</Text>
+              </View>
+            )}
+            {item.avg_vegetation_days && (
+              <View style={styles.evolutionItem}>
+                <Text style={[styles.evolutionValue, { color: '#4CAF50' }]}>
+                  {item.avg_vegetation_days}
+                </Text>
+                <Text style={styles.evolutionLabel}>Vegetação</Text>
+              </View>
+            )}
+            {item.avg_flowering_days && (
+              <View style={styles.evolutionItem}>
+                <Text style={[styles.evolutionValue, { color: '#FF9800' }]}>
+                  {item.avg_flowering_days}
+                </Text>
+                <Text style={styles.evolutionLabel}>Floração</Text>
+              </View>
             )}
           </View>
         </View>
       )}
 
-      {/* Info adicional */}
+      {/* Estatísticas de sementes */}
       <View style={styles.footerInfo}>
-        {item.type && (
-          <View style={styles.tagBadge}>
-            <Text style={styles.tagText}>{item.type}</Text>
-          </View>
-        )}
-        {item.difficulty && (
-          <View style={[styles.tagBadge, styles.difficultyBadge]}>
-            <Text style={styles.tagText}>{item.difficulty}</Text>
-          </View>
-        )}
-        {item.flowering_time_min && item.flowering_time_max && (
-          <Text style={styles.floweringText}>
-            Floração: {item.flowering_time_min}-{item.flowering_time_max} semanas
+        <View style={styles.statsRow}>
+          <Text style={styles.statsText}>
+            Lotes: {item.total_batches}
           </Text>
-        )}
+          <Text style={styles.statsText}>
+            Sementes disponíveis: {item.total_seeds_available}
+          </Text>
+        </View>
+        <View style={styles.statsRow}>
+          <Text style={styles.statsText}>
+            Clones: {item.clones_generated}
+          </Text>
+          <Text style={styles.statsText}>
+            Última atividade: {new Date(item.last_activity).toLocaleDateString('pt-BR')}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );

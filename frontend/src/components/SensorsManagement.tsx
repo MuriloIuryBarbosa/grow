@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { sensorsAPI, readingsAPI } from '../services/api';
+import { sensorsAPI } from '../services/api';
 import { Sensor, LatestSensorReading } from '../types';
 import '../styles/sensors.css';
 

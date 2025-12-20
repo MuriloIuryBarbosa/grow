@@ -251,3 +251,30 @@ export interface SensorStats {
   first_reading?: string;
   last_reading?: string;
 }
+
+// ============================================
+// GENETIC METRICS TYPES
+// ============================================
+
+export interface GeneticMetrics {
+  genetic_id: number;
+  genetic_name: string;
+  breeder?: string;
+  total_plants: number;
+  active_plants: number;
+  germinated_plants: number;
+  dead_plants: number;
+  harvested_plants: number;
+  germination_rate: number;
+  avg_germination_days?: number;
+  avg_vegetation_days?: number;
+  avg_flowering_days?: number;
+  total_yield?: number;
+  avg_yield_per_plant?: number;
+  success_score: number;
+  total_batches: number;
+  total_seeds_used: number;
+  total_seeds_available: number;
+  clones_generated: number;
+  last_activity: string;
+}
