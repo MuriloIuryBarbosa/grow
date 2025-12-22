@@ -27,11 +27,11 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // Plants API
 export const plantsAPI = {
-  getAll: () => fetchAPI<Plant[]>('/plants'),
+  getAll: () => fetchAPI<Plant[]>('/api/plants'),
   
-  getById: (id: number) => fetchAPI<Plant>(`/plants/${id}`),
+  getById: (id: number) => fetchAPI<Plant>(`/api/plants/${id}`),
   
-  create: (data: Partial<Plant>) => fetchAPI<Plant>('/plants', {
+  create: (data: Partial<Plant>) => fetchAPI<Plant>('/api/plants', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
@@ -123,24 +123,24 @@ export const recordsAPI = {
 
 // Statistics API
 export const statisticsAPI = {
-  get: () => fetchAPI<Statistics>('/statistics'),
+  get: () => fetchAPI<Statistics>('/api/statistics'),
 };
 
 // Sensors API
 export const sensorsAPI = {
   getAll: (includeInactive = false) => 
-    fetchAPI<any[]>(`/sensors?include_inactive=${includeInactive}`),
+    fetchAPI<any[]>(`/api/sensors?include_inactive=${includeInactive}`),
   
-  getById: (id: number) => fetchAPI<any>(`/sensors/${id}`),
+  getById: (id: number) => fetchAPI<any>(`/api/sensors/${id}`),
   
-  getLatest: () => fetchAPI<any[]>('/sensors/latest'),
+  getLatest: () => fetchAPI<any[]>('/api/sensors/latest'),
   
-  create: (data: any) => fetchAPI<any>('/sensors', {
+  create: (data: any) => fetchAPI<any>('/api/sensors', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
   
-  update: (id: number, data: any) => fetchAPI<any>(`/sensors/${id}`, {
+  update: (id: number, data: any) => fetchAPI<any>(`/api/sensors/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
@@ -158,13 +158,13 @@ export const sensorsAPI = {
 // Sensor Readings API
 export const readingsAPI = {
   getBySensor: (sensorId: number, limit = 100) => 
-    fetchAPI<any[]>(`/sensors/${sensorId}/readings?limit=${limit}`),
+    fetchAPI<any[]>(`/api/sensors/${sensorId}/readings?limit=${limit}`),
   
   getLatestBySensor: (sensorId: number) => 
-    fetchAPI<any>(`/sensors/${sensorId}/readings/latest`),
+    fetchAPI<any>(`/api/sensors/${sensorId}/readings/latest`),
   
   getStats: (sensorId?: number) => 
-    fetchAPI<any>(sensorId ? `/sensors/${sensorId}/stats` : '/readings/stats'),
+    fetchAPI<any>(sensorId ? `/api/sensors/${sensorId}/stats` : '/api/readings/stats'),
   
   getDailyAverages: (startDate: string, endDate: string, sensorId?: number) => {
     const params = new URLSearchParams({
@@ -172,7 +172,7 @@ export const readingsAPI = {
       end_date: endDate,
       ...(sensorId && { sensor_id: sensorId.toString() }),
     });
-    return fetchAPI<any[]>(`/readings/daily?${params}`);
+    return fetchAPI<any[]>(`/api/readings/daily?${params}`);
   },
   
   getByRange: (startDate: string, endDate: string, sensorId?: number) => {
@@ -184,17 +184,17 @@ export const readingsAPI = {
     return fetchAPI<any[]>(`/readings/range?${params}`);
   },
   
-  create: (data: any) => fetchAPI<any>('/readings', {
+  create: (data: any) => fetchAPI<any>('/api/readings', {
     method: 'POST',
     body: JSON.stringify(data),
   }),
   
-  createBatch: (readings: any[]) => fetchAPI<any[]>('/readings/batch', {
+  createBatch: (readings: any[]) => fetchAPI<any[]>('/api/readings/batch', {
     method: 'POST',
     body: JSON.stringify({ readings }),
   }),
   
-  update: (id: number, data: any) => fetchAPI<any>(`/readings/${id}`, {
+  update: (id: number, data: any) => fetchAPI<any>(`/api/readings/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
