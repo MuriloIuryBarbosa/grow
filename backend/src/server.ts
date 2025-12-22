@@ -97,8 +97,8 @@ app.get('/health', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌱 Servidor rodando em http://0.0.0.0:${PORT}`);
-  console.log(`🌐 Acessível na rede em http://192.168.1.71:${PORT}`);
-  console.log(`📊 API disponível em http://192.168.1.71:${PORT}/api`);
+  console.log(`🌐 Acessível na rede em http://192.168.1.6:${PORT}`);
+  console.log(`📊 API disponível em http://192.168.1.6:${PORT}/api`);
   console.log(`📁 Uploads em ${uploadsDir}`);
 });
 
