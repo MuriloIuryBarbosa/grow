@@ -1,0 +1,5 @@
+## Iniciar o frontend
+cd /home/shurillo/Programming/grow/mobile && npx expo start
+
+Iniciar o backend
+cd backend && npx tsx src/server.ts

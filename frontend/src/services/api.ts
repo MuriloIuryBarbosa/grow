@@ -1,4 +1,4 @@
-import { Plant, DailyRecord, Statistics } from '../types';
+import { Plant, DailyRecord, Statistics, FilteredDailyRecord } from '../types';
 
 const API_URL = 'http://localhost:3000';
 
@@ -58,6 +58,34 @@ export const recordsAPI = {
   
   getById: (plantId: number, recordId: number) => 
     fetchAPI<DailyRecord>(`/plants/${plantId}/records/${recordId}`),
+  
+  getFiltered: (filters: {
+    plantIds?: number[];
+    startDate?: string;
+    endDate?: string;
+    minSize?: number;
+    maxSize?: number;
+    phases?: string[];
+    genetics?: string[];
+  }) => {
+    const params = new URLSearchParams();
+    
+    if (filters.plantIds?.length) {
+      filters.plantIds.forEach(id => params.append('plantIds', id.toString()));
+    }
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.minSize !== undefined) params.append('minSize', filters.minSize.toString());
+    if (filters.maxSize !== undefined) params.append('maxSize', filters.maxSize.toString());
+    if (filters.phases?.length) {
+      filters.phases.forEach(phase => params.append('phases', phase));
+    }
+    if (filters.genetics?.length) {
+      filters.genetics.forEach(genetic => params.append('genetics', genetic));
+    }
+    
+    return fetchAPI<FilteredDailyRecord[]>(`/records/filter?${params}`);
+  },
   
   create: async (plantId: number, data: Partial<DailyRecord> & { photo?: File }) => {
     if (data.photo) {

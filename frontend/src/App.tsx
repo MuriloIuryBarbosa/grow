@@ -5,6 +5,7 @@ import PlantDetail from './pages/PlantDetail';
 import EditPlant from './pages/EditPlant';
 import NewRecord from './pages/NewRecord';
 import EditRecord from './pages/EditRecord';
+import Report from './pages/Report';
 import SensorsManagement from './components/SensorsManagement';
 import RecordReading from './components/RecordReading';
 import './styles/global.css';
@@ -28,8 +29,8 @@ function Navigation() {
           </Link>
         </li>
         <li>
-          <Link to="/new" className={`nav-link ${isActive('/new')}`}>
-            ➕ Nova Planta
+          <Link to="/report" className={`nav-link ${isActive('/report')}`}>
+            📊 Relatório
           </Link>
         </li>
       </ul>
@@ -54,6 +55,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/new" element={<NewPlant />} />
+            <Route path="/report" element={<Report />} />
             <Route path="/plant/:id" element={<PlantDetail />} />
             <Route path="/plant/:id/edit" element={<EditPlant />} />
             <Route path="/plant/:id/new-record" element={<NewRecord />} />

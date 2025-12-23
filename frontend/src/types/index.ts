@@ -59,6 +59,12 @@ export interface DailyRecord {
   updated_at?: string;
 }
 
+export interface FilteredDailyRecord extends DailyRecord {
+  plant_code: string;
+  genetic: string;
+  current_phase: string;
+}
+
 // ===== GENETIC TYPES =====
 export interface Genetic {
   id: number;
@@ -227,7 +233,6 @@ export interface EmptyStateProps extends BaseComponentProps {
     onClick: () => void;
   };
 }
-}
 
 export interface PlantWithRecords extends Plant {
   records?: DailyRecord[];
@@ -263,30 +268,6 @@ export interface Statistics {
     vegetacao?: number;
     floracao?: number;
   };
-}
-
-// Sensor Types
-export interface Sensor {
-  id?: number;
-  name: string;
-  type: 'temperature' | 'humidity' | 'temperature_humidity';
-  location: string;
-  description?: string;
-  is_active: number;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface SensorReading {
-  id?: number;
-  sensor_id: number;
-  temperature?: number;
-  humidity?: number;
-  recorded_at: string;
-  notes?: string;
-  created_at?: string;
-  sensor_name?: string;
-  location?: string;
 }
 
 export interface LatestSensorReading {
