@@ -8,7 +8,7 @@ import geneticsRoutes from './routes-genetics';
 import './database'; // Inicializar banco de dados
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Criar diretório para uploads se não existir
 const uploadsDir = path.join(__dirname, '../../uploads');

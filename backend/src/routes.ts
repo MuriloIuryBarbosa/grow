@@ -473,6 +473,55 @@ router.get('/records', (req: Request, res: Response) => {
   }
 });
 
+// Buscar registros com filtros avançados
+router.get('/records/filter', (req: Request, res: Response) => {
+  try {
+    const filters: any = {};
+
+    // Plant IDs
+    if (req.query.plantIds) {
+      filters.plantIds = Array.isArray(req.query.plantIds) 
+        ? req.query.plantIds.map(id => Number(id))
+        : [Number(req.query.plantIds)];
+    }
+
+    // Date range
+    if (req.query.startDate) {
+      filters.startDate = req.query.startDate as string;
+    }
+    if (req.query.endDate) {
+      filters.endDate = req.query.endDate as string;
+    }
+
+    // Size range
+    if (req.query.minSize) {
+      filters.minSize = Number(req.query.minSize);
+    }
+    if (req.query.maxSize) {
+      filters.maxSize = Number(req.query.maxSize);
+    }
+
+    // Phases
+    if (req.query.phases) {
+      filters.phases = Array.isArray(req.query.phases) 
+        ? req.query.phases as string[]
+        : [req.query.phases as string];
+    }
+
+    // Genetics
+    if (req.query.genetics) {
+      filters.genetics = Array.isArray(req.query.genetics) 
+        ? req.query.genetics as string[]
+        : [req.query.genetics as string];
+    }
+
+    const records = DailyRecordModel.findWithFilters(filters);
+    res.json(records);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar registros filtrados' });
+  }
+});
+
 // Buscar registros de uma planta
 router.get('/records/plant/:plantId', (req: Request, res: Response) => {
   try {
@@ -991,7 +1040,10 @@ router.get('/statistics/genetic-metrics', (req: Request, res: Response) => {
     res.json(metrics);
   } catch (error) {
     console.error('Erro ao buscar métricas genéticas:', error);
-    res.status(500).json({ error: 'Erro ao buscar métricas genéticas', details: error.message });
+    res.status(500).json({ 
+      error: 'Erro ao buscar métricas genéticas', 
+      details: error instanceof Error ? error.message : 'Erro desconhecido' 
+    });
   }
 });
 

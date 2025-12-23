@@ -456,6 +456,65 @@ export const DailyRecordModel = {
     const stmt = db.prepare('DELETE FROM daily_records WHERE id = ?');
     const info = stmt.run(id);
     return info.changes > 0;
+  },
+
+  // Buscar registros com filtros avançados
+  findWithFilters(filters: {
+    plantIds?: number[];
+    startDate?: string;
+    endDate?: string;
+    minSize?: number;
+    maxSize?: number;
+    phases?: string[];
+    genetics?: string[];
+  }): DailyRecord[] {
+    let query = `
+      SELECT dr.*, p.code as plant_code, p.genetic, p.current_phase
+      FROM daily_records dr
+      JOIN plants p ON dr.plant_id = p.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (filters.plantIds && filters.plantIds.length > 0) {
+      query += ` AND dr.plant_id IN (${filters.plantIds.map(() => '?').join(',')})`;
+      params.push(...filters.plantIds);
+    }
+
+    if (filters.startDate) {
+      query += ' AND dr.record_date >= ?';
+      params.push(filters.startDate);
+    }
+
+    if (filters.endDate) {
+      query += ' AND dr.record_date <= ?';
+      params.push(filters.endDate);
+    }
+
+    if (filters.minSize !== undefined) {
+      query += ' AND dr.plant_size >= ?';
+      params.push(filters.minSize);
+    }
+
+    if (filters.maxSize !== undefined) {
+      query += ' AND dr.plant_size <= ?';
+      params.push(filters.maxSize);
+    }
+
+    if (filters.phases && filters.phases.length > 0) {
+      query += ` AND p.current_phase IN (${filters.phases.map(() => '?').join(',')})`;
+      params.push(...filters.phases);
+    }
+
+    if (filters.genetics && filters.genetics.length > 0) {
+      query += ` AND p.genetic IN (${filters.genetics.map(() => '?').join(',')})`;
+      params.push(...filters.genetics);
+    }
+
+    query += ' ORDER BY dr.record_date DESC, dr.plant_id ASC';
+
+    const stmt = db.prepare(query);
+    return stmt.all(...params) as (DailyRecord & { plant_code: string; genetic: string; current_phase: string })[];
   }
 };
 
