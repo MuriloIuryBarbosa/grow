@@ -277,10 +277,12 @@ router.get('/statistics/genetics', (req: Request, res: Response) => {
         SUM(CASE WHEN p.status = 'ativa' THEN 1 ELSE 0 END) as active_plants,
         SUM(CASE WHEN p.status = 'morta' THEN 1 ELSE 0 END) as dead_plants,
         SUM(CASE WHEN p.status = 'falha_germinacao' THEN 1 ELSE 0 END) as germination_failures,
-        -- Taxa de sucesso (plantas que não morreram / total)
+        -- Sementes disponíveis
+        SUM(sb.current_quantity) as total_seeds_available,
+        -- Taxa de sucesso: (plantas ativas - plantas mortas) / sementes disponíveis
         CASE 
-          WHEN COUNT(p.id) > 0 
-          THEN ROUND(CAST(SUM(CASE WHEN p.status = 'ativa' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(p.id) * 100, 1)
+          WHEN SUM(sb.current_quantity) > 0 
+          THEN ROUND(CAST((SUM(CASE WHEN p.status = 'ativa' THEN 1 ELSE 0 END) - SUM(CASE WHEN p.status IN ('morta', 'falha_germinacao') THEN 1 ELSE 0 END)) AS FLOAT) / SUM(sb.current_quantity) * 100, 1)
           ELSE NULL 
         END as success_rate,
         -- Taxa de germinação (plantas que passaram da germinação / total)
@@ -1025,7 +1027,7 @@ router.get('/statistics/genetic-metrics', (req: Request, res: Response) => {
         gs.breeder,
         COUNT(DISTINCT p.id) as total_plants,
         COUNT(DISTINCT CASE WHEN p.status = 'ativa' THEN p.id END) as active_plants,
-        COUNT(DISTINCT CASE WHEN p.status = 'morta' THEN p.id END) as dead_plants,
+        COUNT(DISTINCT CASE WHEN p.status IN ('morta', 'falha_germinacao') THEN p.id END) as dead_plants,
         COUNT(DISTINCT CASE WHEN p.status = 'colhida' THEN p.id END) as harvested_plants,
         gs.genetic_id
       FROM genetic_strains gs

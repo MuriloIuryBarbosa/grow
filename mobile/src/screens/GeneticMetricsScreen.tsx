@@ -105,6 +105,13 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
         </View>
       </View>
 
+      {/* Resumo de plantas */}
+      <View style={styles.plantsSummary}>
+        <Text style={styles.summaryText}>
+          Plantas: {item.active_plants} ativas, {item.dead_plants} mortas
+        </Text>
+      </View>
+
       {/* Taxas */}
       <View style={styles.ratesContainer}>
         <View style={styles.rateItem}>
@@ -508,5 +515,19 @@ const styles = StyleSheet.create({
   floweringText: {
     fontSize: 12,
     color: '#666',
+  },
+  plantsSummary: {
+    marginTop: 8,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 6,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
