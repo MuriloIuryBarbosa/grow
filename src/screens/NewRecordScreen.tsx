@@ -37,6 +37,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [showSizeConfirmation, setShowSizeConfirmation] = useState(false);
   const [confirmedSize, setConfirmedSize] = useState('');
   const [videoReady, setVideoReady] = useState(false);
+  const [processingSize, setProcessingSize] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -230,6 +231,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
           if (blob) {
             const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
             if (isMeasuring) {
+              setProcessingSize(true);
               // Estimar tamanho
               estimatePlantSize(file).then(size => {
                 setEstimatedSize(size);
@@ -240,11 +242,18 @@ export default function NewRecordScreen({ route, navigation }: Props) {
                 setShowCamera(false);
                 setIsMeasuring(false);
                 setVideoReady(false);
+                setProcessingSize(false);
                 // Stop stream
                 const stream = video.srcObject as MediaStream;
                 if (stream) {
                   stream.getTracks().forEach(track => track.stop());
                 }
+              }).catch(() => {
+                setProcessingSize(false);
+                Alert.alert('Erro', 'Não foi possível processar a imagem');
+                setShowCamera(false);
+                setIsMeasuring(false);
+                setVideoReady(false);
               });
             } else {
               setSelectedFile(file);
@@ -267,6 +276,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
     setShowCamera(false);
     setVideoReady(false);
     setIsMeasuring(false);
+    setProcessingSize(false);
     if (videoRef.current) {
       const stream = videoRef.current.srcObject as MediaStream;
       if (stream) {
@@ -300,6 +310,47 @@ export default function NewRecordScreen({ route, navigation }: Props) {
     setEstimatedSize(null);
     setSelectedFile(null);
     setImageUri(null);
+  };
+
+  const estimatePlantSize = async (file: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          
+          let greenPixels = 0;
+          let totalPixels = data.length / 4;
+          
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            
+            // Detectar pixels verdes (folhas)
+            if (g > r + 20 && g > b + 20 && g > 50) {
+              greenPixels++;
+            }
+          }
+          
+          // Estimar tamanho baseado na porcentagem de pixels verdes
+          const greenRatio = greenPixels / totalPixels;
+          // Assumir que plantas maiores têm mais pixels verdes
+          const estimatedSize = Math.max(5, Math.min(100, 10 + (greenRatio * 80)));
+          
+          resolve(Math.round(estimatedSize * 10) / 10); // Arredondar para 1 decimal
+        } else {
+          resolve(25); // Fallback
+        }
+      };
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   const showPhotoOptions = () => {
@@ -546,13 +597,20 @@ export default function NewRecordScreen({ route, navigation }: Props) {
             <video ref={videoRef} autoPlay style={{ width: '100%', height: 300, borderRadius: 8 }} />
             <canvas ref={canvasRef} style={{ display: 'none' }} width={640} height={480} />
             <View style={styles.cameraActions}>
-              <TouchableOpacity 
-                style={[styles.captureButton, !videoReady && styles.disabledButton]} 
-                onPress={capturePhoto}
-                disabled={!videoReady}
-              >
-                <Text style={styles.captureButtonText}>📷 Capturar</Text>
-              </TouchableOpacity>
+              {processingSize ? (
+                <View style={styles.processingContainer}>
+                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <Text style={styles.processingText}>Processando imagem...</Text>
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.captureButton, !videoReady && styles.disabledButton]} 
+                  onPress={capturePhoto}
+                  disabled={!videoReady}
+                >
+                  <Text style={styles.captureButtonText}>📷 Capturar</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.cancelCameraButton} onPress={cancelCamera}>
                 <Text style={styles.cancelCameraButtonText}>Cancelar</Text>
               </TouchableOpacity>
@@ -838,6 +896,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  processingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#333',
   },
   cancelCameraButton: {
     backgroundColor: '#fff',
