@@ -10,6 +10,7 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { usePlants } from '../hooks/usePlants';
@@ -45,14 +46,16 @@ export default function HomeScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'plants' | 'dead'>('dashboard');
   const [phaseStats, setPhaseStats] = useState<PhaseStatistics[]>([]);
+  const [selectedGenetic, setSelectedGenetic] = useState<string>('');
 
   useEffect(() => {
     loadPhaseStats();
-  }, []);
+  }, [selectedGenetic]);
 
   const loadPhaseStats = async () => {
     try {
-      const stats = await statisticsAPI.getPhaseStats();
+      const filters = selectedGenetic ? { genetic: selectedGenetic } : undefined;
+      const stats = await statisticsAPI.getPhaseStats(filters);
       setPhaseStats(stats);
     } catch (error) {
       console.error('Erro ao carregar estatísticas de fases:', error);
@@ -68,6 +71,9 @@ export default function HomeScreen({ navigation }: Props) {
   // Separar plantas ativas e mortas
   const activePlants = plants.filter(p => p.status === 'ativa');
   const deadPlants = plants.filter(p => p.status === 'morta' || p.status === 'falha_germinacao');
+
+  // Obter genéticas únicas
+  const uniqueGenetics = Array.from(new Set(plants.map(p => p.genetic).filter(Boolean))).sort();
 
   const getStats = () => {
     const stats = {
@@ -161,8 +167,24 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </View>
 
-        {/* Estatísticas de Evolução por Fase */}
+        {/* Filtro de Genética para Estatísticas de Fases */}
         <Text style={styles.sectionTitle}>Evolução das Fases (dias)</Text>
+        <View style={styles.filterContainer}>
+          <Text style={styles.filterLabel}>Filtrar por Genética:</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={selectedGenetic}
+              onValueChange={(value) => setSelectedGenetic(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Todas as genéticas" value="" />
+              {uniqueGenetics.map((genetic) => (
+                <Picker.Item key={genetic} label={genetic} value={genetic} />
+              ))}
+            </Picker>
+          </View>
+        </View>
+
         <View style={styles.phaseEvolutionContainer}>
           {/* Header */}
           <View style={styles.phaseEvolutionHeader}>
@@ -639,5 +661,23 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#fff',
     lineHeight: 32,
+  },
+  filterContainer: {
+    marginBottom: 16,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  picker: {
+    height: 50,
   },
 });

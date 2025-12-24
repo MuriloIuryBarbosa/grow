@@ -99,8 +99,13 @@ export const statisticsAPI = {
     return data;
   },
   
-  getPhaseStats: async () => {
-    const { data } = await api.get<PhaseStatistics[]>('/statistics/phases');
+  getPhaseStats: async (filters?: { genetic?: string; plant_ids?: number[] }) => {
+    const params = new URLSearchParams();
+    if (filters?.genetic) params.append('genetic', filters.genetic);
+    if (filters?.plant_ids && filters.plant_ids.length > 0) params.append('plant_ids', filters.plant_ids.join(','));
+    
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const { data } = await api.get<PhaseStatistics[]>(`/statistics/phases${query}`);
     return data;
   },
 

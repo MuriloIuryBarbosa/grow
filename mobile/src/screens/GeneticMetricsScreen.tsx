@@ -11,6 +11,7 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { statisticsAPI, GeneticMetrics } from '../services/api';
+import { theme } from '../theme';
 
 type GeneticMetricsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -47,12 +48,12 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
   };
 
   const getScoreColor = (score: number | null) => {
-    if (score === null) return '#999';
-    if (score >= 80) return '#4CAF50';
-    if (score >= 60) return '#8BC34A';
-    if (score >= 40) return '#FFC107';
-    if (score >= 20) return '#FF9800';
-    return '#f44336';
+    if (score === null) return theme.colors.textSecondary;
+    if (score >= 80) return theme.colors.success;
+    if (score >= 60) return theme.colors.secondary[500];
+    if (score >= 40) return theme.colors.phases.harvest;
+    if (score >= 20) return theme.colors.warning;
+    return theme.colors.error;
   };
 
   const getScoreLabel = (score: number | null) => {
@@ -77,11 +78,11 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
             <Text style={styles.breeder}>{item.breeder}</Text>
           )}
         </View>
-        <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(item.success_score) }]}>
+        <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(item.success_rate) }]}>
           <Text style={styles.scoreValue}>
-            {item.success_score !== null ? item.success_score : '-'}
+            {item.success_rate !== null ? item.success_rate : '-'}
           </Text>
-          <Text style={styles.scoreLabel}>{getScoreLabel(item.success_score)}</Text>
+          <Text style={styles.scoreLabel}>{getScoreLabel(item.success_rate)}</Text>
         </View>
       </View>
 
@@ -92,15 +93,15 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
           <Text style={styles.metricLabel}>Total</Text>
         </View>
         <View style={styles.metricItem}>
-          <Text style={[styles.metricValue, { color: '#4CAF50' }]}>{item.active_plants}</Text>
+          <Text style={[styles.metricValue, { color: theme.colors.success }]}>{item.active_plants}</Text>
           <Text style={styles.metricLabel}>Ativas</Text>
         </View>
         <View style={styles.metricItem}>
-          <Text style={[styles.metricValue, { color: '#f44336' }]}>{item.dead_plants}</Text>
+          <Text style={[styles.metricValue, { color: theme.colors.error }]}>{item.dead_plants}</Text>
           <Text style={styles.metricLabel}>Mortas</Text>
         </View>
         <View style={styles.metricItem}>
-          <Text style={[styles.metricValue, { color: '#FF9800' }]}>{item.harvested_plants}</Text>
+          <Text style={[styles.metricValue, { color: theme.colors.phases.harvest }]}>{item.harvested_plants}</Text>
           <Text style={styles.metricLabel}>Colhidas</Text>
         </View>
       </View>
@@ -131,6 +132,23 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
             {item.germination_rate !== null ? `${item.germination_rate}%` : '-'}
           </Text>
         </View>
+        <View style={styles.rateItem}>
+          <Text style={styles.rateLabel}>Taxa de Sucesso</Text>
+          <View style={styles.rateBar}>
+            <View 
+              style={[
+                styles.rateProgress, 
+                { 
+                  width: `${item.success_rate || 0}%`,
+                  backgroundColor: getScoreColor(item.success_rate)
+                }
+              ]} 
+            />
+          </View>
+          <Text style={styles.rateValue}>
+            {item.success_rate !== null ? `${item.success_rate}%` : '-'}
+          </Text>
+        </View>
       </View>
 
       {/* Tempos médios */}
@@ -148,7 +166,7 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
             )}
             {item.avg_vegetation_days && (
               <View style={styles.evolutionItem}>
-                <Text style={[styles.evolutionValue, { color: '#4CAF50' }]}>
+                <Text style={[styles.evolutionValue, { color: theme.colors.phases.vegetative }]}>
                   {item.avg_vegetation_days}
                 </Text>
                 <Text style={styles.evolutionLabel}>Vegetação</Text>
@@ -156,7 +174,7 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
             )}
             {item.avg_flowering_days && (
               <View style={styles.evolutionItem}>
-                <Text style={[styles.evolutionValue, { color: '#FF9800' }]}>
+                <Text style={[styles.evolutionValue, { color: theme.colors.phases.flowering }]}>
                   {item.avg_flowering_days}
                 </Text>
                 <Text style={styles.evolutionLabel}>Floração</Text>
@@ -267,53 +285,53 @@ export default function GeneticMetricsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: theme.spacing.lg,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.base,
+    color: theme.colors.textSecondary,
   },
   errorText: {
-    color: '#dc2626',
-    fontSize: 16,
-    marginBottom: 16,
+    color: theme.colors.error,
+    fontSize: theme.typography.sizes.base,
+    marginBottom: theme.spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#2d5016',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary[800],
+    paddingHorizontal: theme.spacing['2xl'],
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
   },
   retryText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: theme.colors.surface,
+    fontWeight: theme.typography.weights.semibold,
   },
   emptyEmoji: {
     fontSize: 64,
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes['2xl'],
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
   summaryHeader: {
     flexDirection: 'row',
-    backgroundColor: '#2d5016',
-    padding: 16,
+    backgroundColor: theme.colors.primary[800],
+    padding: theme.spacing.lg,
     justifyContent: 'space-around',
   },
   summaryItem: {
@@ -321,113 +339,109 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.surface,
   },
   summaryLabel: {
-    fontSize: 12,
-    color: '#c8e6c9',
-    marginTop: 4,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.primary[200],
+    marginTop: theme.spacing.sm,
   },
   listContainer: {
-    padding: 16,
+    padding: theme.spacing.lg,
   },
   listSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: theme.typography.sizes.base,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.md,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
   geneticInfo: {
     flex: 1,
   },
   geneticName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: theme.typography.sizes['2xl'],
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text,
   },
   breeder: {
-    fontSize: 14,
+    fontSize: theme.typography.sizes.sm,
     color: '#7B68EE',
-    marginTop: 2,
+    marginTop: theme.spacing.xs,
   },
   scoreBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.xl,
     alignItems: 'center',
     minWidth: 70,
   },
   scoreValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: theme.typography.sizes['3xl'],
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.surface,
   },
   scoreLabel: {
-    fontSize: 10,
-    color: '#fff',
-    marginTop: 2,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.surface,
+    marginTop: theme.spacing.xs,
     textTransform: 'uppercase',
   },
   metricsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: theme.colors.gray[50],
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   metricItem: {
     alignItems: 'center',
     flex: 1,
   },
   metricValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: theme.typography.sizes['2xl'],
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text,
   },
   metricLabel: {
-    fontSize: 10,
-    color: '#666',
-    marginTop: 2,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
     textAlign: 'center',
   },
   ratesContainer: {
-    gap: 12,
-    marginBottom: 16,
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   rateItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   rateLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
     width: 120,
   },
   rateBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.sm,
     overflow: 'hidden',
   },
   rateProgress: {
@@ -435,23 +449,23 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   rateValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text,
     width: 45,
     textAlign: 'right',
   },
   evolutionContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 12,
-    marginBottom: 12,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.xs,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
     textTransform: 'uppercase',
   },
   evolutionRow: {
@@ -462,72 +476,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   evolutionValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text,
   },
   evolutionLabel: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 2,
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
   },
   growthContainer: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 12,
-    marginBottom: 12,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   growthRow: {
     flexDirection: 'row',
-    gap: 20,
+    gap: theme.spacing['2xl'],
   },
   growthText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
   },
   growthValue: {
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text,
   },
   footerInfo: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 12,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing.md,
   },
   tagBadge: {
-    backgroundColor: '#e8f5e9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: theme.colors.primary[50],
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.sm,
   },
   difficultyBadge: {
-    backgroundColor: '#fff3e0',
+    backgroundColor: theme.colors.warning[50],
   },
   tagText: {
-    fontSize: 12,
-    color: '#333',
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text,
     textTransform: 'capitalize',
   },
   floweringText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
   },
   plantsSummary: {
-    marginTop: 8,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 6,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.gray[50],
+    borderRadius: theme.borderRadius.sm,
   },
   summaryText: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: theme.typography.weights.medium,
   },
 });

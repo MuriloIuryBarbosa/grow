@@ -217,6 +217,26 @@ router.get('/plants/phase/:phase', (req: Request, res: Response) => {
 // Estatísticas de evolução de fases
 router.get('/statistics/phases', (req: Request, res: Response) => {
   try {
+    const { genetic, plant_ids } = req.query;
+
+    // Construir condições WHERE adicionais
+    let whereConditions = `
+      WHERE ph.duration_days IS NOT NULL 
+        AND ph.duration_days > 0
+        AND p.status NOT IN ('morta', 'falha_germinacao')
+    `;
+
+    if (genetic) {
+      whereConditions += ` AND p.genetic = '${(genetic as string).replace(/'/g, "''")}'`;
+    }
+
+    if (plant_ids) {
+      const ids = (plant_ids as string).split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+      if (ids.length > 0) {
+        whereConditions += ` AND ph.plant_id IN (${ids.join(',')})`;
+      }
+    }
+
     // Buscar dados do phase_history (excluindo plantas mortas)
     const phaseStats = db.prepare(`
       SELECT 
@@ -227,9 +247,7 @@ router.get('/statistics/phases', (req: Request, res: Response) => {
         MAX(ph.duration_days) as max_days
       FROM phase_history ph
       INNER JOIN plants p ON ph.plant_id = p.id
-      WHERE ph.duration_days IS NOT NULL 
-        AND ph.duration_days > 0
-        AND p.status NOT IN ('morta', 'falha_germinacao')
+      ${whereConditions}
       GROUP BY ph.phase
     `).all() as Array<{
       phase: string;
