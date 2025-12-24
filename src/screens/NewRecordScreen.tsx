@@ -29,6 +29,9 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
   const [showOptions, setShowOptions] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showDeviceSelection, setShowDeviceSelection] = useState(false);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<MediaDeviceInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -38,7 +41,8 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   
   useEffect(() => {
     if (showCamera && videoRef.current && Platform.OS === 'web') {
-      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      const constraints = selectedDevice ? { video: { deviceId: selectedDevice.deviceId } } : { video: true };
+      navigator.mediaDevices.getUserMedia(constraints).then(stream => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -48,7 +52,22 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         setShowCamera(false);
       });
     }
-  }, [showCamera]);
+  }, [showCamera, selectedDevice]);
+  
+  useEffect(() => {
+    if (showDeviceSelection && Platform.OS === 'web') {
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        setVideoDevices(videoDevices);
+      }).catch(err => {
+        console.error('Error enumerating devices:', err);
+        // Fallback to default camera
+        setSelectedDevice(null);
+        setShowDeviceSelection(false);
+        setShowCamera(true);
+      });
+    }
+  }, [showDeviceSelection]);
   
   const [formData, setFormData] = useState<Partial<DailyRecord>>({
     record_date: today,
@@ -163,7 +182,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const handleCameraOption = () => {
     setShowOptions(false);
     if (Platform.OS === 'web') {
-      setShowCamera(true);
+      setShowDeviceSelection(true);
     } else {
       cameraInputRef.current?.click();
     }
@@ -210,6 +229,16 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         stream.getTracks().forEach(track => track.stop());
       }
     }
+  };
+
+  const selectDevice = (device: MediaDeviceInfo) => {
+    setSelectedDevice(device);
+    setShowDeviceSelection(false);
+    setShowCamera(true);
+  };
+
+  const cancelDeviceSelection = () => {
+    setShowDeviceSelection(false);
   };
 
   const showPhotoOptions = () => {
@@ -427,6 +456,21 @@ export default function NewRecordScreen({ route, navigation }: Props) {
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelOptionButton} onPress={cancelOptions}>
               <Text style={styles.cancelOptionButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {showDeviceSelection && Platform.OS === 'web' && (
+        <View style={styles.deviceModal}>
+          <View style={styles.deviceContainer}>
+            <Text style={styles.deviceTitle}>Selecionar Câmera</Text>
+            {videoDevices.map(device => (
+              <TouchableOpacity key={device.deviceId} style={styles.deviceButton} onPress={() => selectDevice(device)}>
+                <Text style={styles.deviceButtonText}>{device.label || `Câmera ${device.deviceId.slice(0,8)}`}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.cancelDeviceButton} onPress={cancelDeviceSelection}>
+              <Text style={styles.cancelDeviceButtonText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -711,6 +755,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelCameraButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deviceModal: {
+    position: 'absolute' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deviceContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+  },
+  deviceTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+  },
+  deviceButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  deviceButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelDeviceButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelDeviceButtonText: {
     color: '#666',
     fontSize: 16,
     fontWeight: '600',
