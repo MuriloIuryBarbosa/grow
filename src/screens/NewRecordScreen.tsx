@@ -36,6 +36,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
   const [showSizeConfirmation, setShowSizeConfirmation] = useState(false);
   const [confirmedSize, setConfirmedSize] = useState('');
+  const [videoReady, setVideoReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -49,12 +50,17 @@ export default function NewRecordScreen({ route, navigation }: Props) {
       navigator.mediaDevices.getUserMedia(constraints).then(stream => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            setVideoReady(true);
+          };
         }
       }).catch(err => {
         console.error('Error accessing camera:', err);
         Alert.alert('Erro', 'Não foi possível acessar a câmera');
         setShowCamera(false);
       });
+    } else {
+      setVideoReady(false);
     }
   }, [showCamera, selectedDevice]);
   
@@ -213,6 +219,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   };
 
   const capturePhoto = () => {
+    if (!videoReady) return;
     const canvas = canvasRef.current;
     const video = videoRef.current;
     if (canvas && video && Platform.OS === 'web') {
@@ -232,6 +239,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
                 setImageUri(URL.createObjectURL(file));
                 setShowCamera(false);
                 setIsMeasuring(false);
+                setVideoReady(false);
                 // Stop stream
                 const stream = video.srcObject as MediaStream;
                 if (stream) {
@@ -242,6 +250,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
               setSelectedFile(file);
               setImageUri(URL.createObjectURL(file));
               setShowCamera(false);
+              setVideoReady(false);
               // Stop stream
               const stream = video.srcObject as MediaStream;
               if (stream) {
@@ -256,6 +265,8 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const cancelCamera = () => {
     setShowCamera(false);
+    setVideoReady(false);
+    setIsMeasuring(false);
     if (videoRef.current) {
       const stream = videoRef.current.srcObject as MediaStream;
       if (stream) {
@@ -535,7 +546,11 @@ export default function NewRecordScreen({ route, navigation }: Props) {
             <video ref={videoRef} autoPlay style={{ width: '100%', height: 300, borderRadius: 8 }} />
             <canvas ref={canvasRef} style={{ display: 'none' }} width={640} height={480} />
             <View style={styles.cameraActions}>
-              <TouchableOpacity style={styles.captureButton} onPress={capturePhoto}>
+              <TouchableOpacity 
+                style={[styles.captureButton, !videoReady && styles.disabledButton]} 
+                onPress={capturePhoto}
+                disabled={!videoReady}
+              >
                 <Text style={styles.captureButtonText}>📷 Capturar</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelCameraButton} onPress={cancelCamera}>
@@ -815,6 +830,9 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
   captureButtonText: {
     color: '#fff',
