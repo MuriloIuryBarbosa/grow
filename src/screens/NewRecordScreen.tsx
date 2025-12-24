@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,9 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const { plantId } = route.params;
   const [loading, setLoading] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const today = new Date().toISOString().split('T')[0];
   
@@ -54,15 +56,19 @@ export default function NewRecordScreen({ route, navigation }: Props) {
       // Upload da foto se existir
       if (imageUri) {
         const uploadFormData = new FormData();
-        const filename = imageUri.split('/').pop() || 'photo.jpg';
-        const match = /\.([\w]+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        
-        uploadFormData.append('photo', {
-          uri: imageUri,
-          name: filename,
-          type,
-        } as any);
+        if (Platform.OS === 'web' && selectedFile) {
+          uploadFormData.append('photo', selectedFile);
+        } else {
+          const filename = imageUri.split('/').pop() || 'photo.jpg';
+          const match = /\.([\w]+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          
+          uploadFormData.append('photo', {
+            uri: imageUri,
+            name: filename,
+            type,
+          } as any);
+        }
 
         const uploadResponse = await axios.post(
           `${API_BASE_URL}/api/upload`,
@@ -132,18 +138,23 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const removePhoto = () => {
     setImageUri(null);
+    setSelectedFile(null);
   };
 
   const showPhotoOptions = () => {
-    Alert.alert(
-      'Adicionar Foto',
-      'Escolha uma opção',
-      [
-        { text: 'Tirar Foto', onPress: takePhoto },
-        { text: 'Escolher da Galeria', onPress: pickImage },
-        { text: 'Cancelar', style: 'cancel' },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      fileInputRef.current?.click();
+    } else {
+      Alert.alert(
+        'Adicionar Foto',
+        'Escolha uma opção',
+        [
+          { text: 'Tirar Foto', onPress: takePhoto },
+          { text: 'Escolher da Galeria', onPress: pickImage },
+          { text: 'Cancelar', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   return (
@@ -333,6 +344,21 @@ export default function NewRecordScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      {Platform.OS === 'web' && (
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+              setSelectedFile(file);
+              setImageUri(URL.createObjectURL(file));
+            }
+          }}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
