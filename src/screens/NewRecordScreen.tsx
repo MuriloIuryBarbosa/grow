@@ -27,6 +27,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
+  const [showOptions, setShowOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,17 +143,23 @@ export default function NewRecordScreen({ route, navigation }: Props) {
     setSelectedFile(null);
   };
 
+  const handleCameraOption = () => {
+    setShowOptions(false);
+    cameraInputRef.current?.click();
+  };
+
+  const handleFileOption = () => {
+    setShowOptions(false);
+    fileInputRef.current?.click();
+  };
+
+  const cancelOptions = () => {
+    setShowOptions(false);
+  };
+
   const showPhotoOptions = () => {
     if (Platform.OS === 'web') {
-      Alert.alert(
-        'Adicionar Foto',
-        'Escolha uma opção',
-        [
-          { text: 'Tirar Foto', onPress: () => cameraInputRef.current?.click() },
-          { text: 'Escolher do Computador', onPress: () => fileInputRef.current?.click() },
-          { text: 'Cancelar', style: 'cancel' },
-        ]
-      );
+      setShowOptions(true);
     } else {
       Alert.alert(
         'Adicionar Foto',
@@ -353,6 +360,22 @@ export default function NewRecordScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      {showOptions && Platform.OS === 'web' && (
+        <View style={styles.optionsModal}>
+          <View style={styles.optionsContainer}>
+            <Text style={styles.optionsTitle}>Adicionar Foto</Text>
+            <TouchableOpacity style={styles.optionButton} onPress={handleCameraOption}>
+              <Text style={styles.optionButtonText}>📷 Tirar Foto</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.optionButton} onPress={handleFileOption}>
+              <Text style={styles.optionButtonText}>💻 Escolher do Computador</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelOptionButton} onPress={cancelOptions}>
+              <Text style={styles.cancelOptionButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       {Platform.OS === 'web' && (
         <>
           <input
@@ -515,5 +538,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+  optionsModal: {
+    position: 'absolute' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+  },
+  optionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+  },
+  optionButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  optionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelOptionButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelOptionButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
