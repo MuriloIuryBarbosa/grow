@@ -14,16 +14,16 @@ if [ ! -d "$SCRIPT_DIR/backend/node_modules" ]; then
     cd "$SCRIPT_DIR/backend" && npm install
 fi
 
-if [ ! -d "$SCRIPT_DIR/frontend/node_modules" ]; then
-    echo "📦 Instalando dependências do frontend..."
-    cd "$SCRIPT_DIR/frontend" && npm install
+if [ ! -d "$SCRIPT_DIR/node_modules" ]; then
+    echo "📦 Instalando dependências do app React Native..."
+    cd "$SCRIPT_DIR" && npm install
 fi
 
 # Matar processos anteriores se existirem
 echo "🧹 Limpando processos anteriores..."
 pkill -f "node.*test-server.js" 2>/dev/null
 pkill -f "tsx.*server.ts" 2>/dev/null
-pkill -f "vite" 2>/dev/null
+pkill -f "expo" 2>/dev/null
 sleep 2
 
 # Iniciar backend em background
@@ -35,11 +35,11 @@ BACKEND_PID=$!
 # Aguardar o backend iniciar
 sleep 3
 
-# Iniciar frontend
-echo "🚀 Iniciando frontend (porta 5173)..."
-cd "$SCRIPT_DIR/frontend"
-npm run dev > /tmp/grow-frontend.log 2>&1 &
-FRONTEND_PID=$!
+# Iniciar app React Native
+echo "🚀 Iniciando app React Native..."
+cd "$SCRIPT_DIR"
+npx expo start --lan > /tmp/grow-app.log 2>&1 &
+APP_PID=$!
 
 # Aguardar logs inicializarem
 sleep 2
@@ -48,17 +48,17 @@ echo ""
 echo "✅ Sistema iniciado com sucesso!"
 echo ""
 echo "📍 Backend: http://localhost:3000"
-echo "📍 Frontend: http://localhost:5173"
+echo "📱 App React Native: Use Expo Go ou simulador"
 echo ""
 echo "📋 Logs:"
 echo "   Backend: tail -f /tmp/grow-backend.log"
-echo "   Frontend: tail -f /tmp/grow-frontend.log"
+echo "   App: tail -f /tmp/grow-app.log"
 echo ""
 echo "Para parar o sistema, pressione Ctrl+C"
 echo ""
 
 # Aguardar por Ctrl+C
-trap "echo ''; echo '🛑 Parando sistema...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT TERM
+trap "echo ''; echo '🛑 Parando sistema...'; kill $BACKEND_PID $APP_PID 2>/dev/null; exit" INT TERM
 
 # Manter o script rodando
 wait

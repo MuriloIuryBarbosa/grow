@@ -1,84 +1,119 @@
-# 🌱 GROW - Sistema de Gerenciamento de Cultivo v2.0
+# Grow App
 
-Sistema completo para gerenciamento e monitoramento de cultivo de plantas com registro diário, histórico de fases e visualização de dados.
+Aplicativo React Native para gerenciamento de cultivo de plantas.
 
-## ✨ O que foi refatorado
+## 🚀 Tecnologias
 
-✅ **Banco de Dados Robusto**
-- Schema consolidado com constraints, triggers e views
-- Validações automáticas em nível de banco
-- Migração de dados preservando histórico
+- **Expo** (React Native)
+- **TypeScript**
+- **React Navigation** (navegação)
+- **Axios** (requisições HTTP)
+- **date-fns** & **date-fns-tz** (datas com timezone brasileiro)
+- **Expo Image Picker** (fotos)
+- **SQLite** (banco local - backend)
 
-✅ **Backend com Arquitetura Limpa**
-- Repository Pattern para separação de responsabilidades
-- Prepared statements para segurança e performance
-- Middleware de erro centralizado
-- Singleton para conexão de banco
+## 📁 Estrutura
 
-✅ **Frontend Otimizado**
-- Utilitários centralizados (date.utils)
-- Hooks otimizados com logs de debug
-- Tratamento de erros robusto
-- TypeScript para type safety
+```
+src/
+├── screens/          # Telas do app (Home, PlantDetail, NewPlant, etc)
+├── components/       # Componentes reutilizáveis
+├── services/         # API e serviços (axios)
+├── hooks/            # Custom hooks (usePlants, useRecords)
+├── utils/            # Funções utilitárias (formatação de data)
+├── types/            # TypeScript types
+└── navigation/       # Configuração de navegação
 
-✅ **Boas Práticas**
-- Código documentado e organizado
-- Logs estruturados para debug
-- Scripts de inicialização automatizados
-- README completo com documentação
-
-## 🚀 Como Usar
-
-### Método Rápido
-```bash
-./start-v2.sh
+backend/              # Backend Node.js com SQLite
+├── src/
+├── database/
+└── uploads/
 ```
 
-### URLs
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3000
+## 🎯 Funcionalidades
 
-## 📊 Funcionalidades
+### Plantas
+- [x] Listagem de plantas
+- [x] Detalhes da planta com gráficos
+- [x] Criar nova planta
+- [x] Editar planta
+- [x] Excluir planta
 
-- ✅ Cadastro completo de plantas
-- ✅ Histórico automático de fases
-- ✅ Registros diários com métricas
-- ✅ Gráficos interativos com tooltips
-- ✅ Upload de fotos
-- ✅ Cálculo automático de estatísticas
-- ✅ Marcadores de fase nos gráficos
-- ✅ Interpolação inteligente de dados
+### Fases
+- [x] Histórico de fases
+- [x] Duração das fases
+- [x] Gráficos de crescimento
+- [x] Estatísticas por genética
 
-## 🗄️ Estrutura do Banco
+### Registros Diários
+- [x] Criar registro com foto
+- [x] Editar registro
+- [x] Visualizar histórico
+- [x] Campos: tamanho, folhas, galhos, PPFD, VPD, fertilização, localização, observações
 
-### Tabelas
-- **plants** - Dados das plantas
-- **phase_history** - Histórico de fases
-- **daily_records** - Registros diários
+### Sensores
+- [x] Dashboard com gráficos
+- [x] Gerenciamento de sensores (CRUD)
+- [x] Registrar leituras (temperatura/umidade)
+- [x] Tipos: temperatura, umidade, luz, pH, EC, CO2
+- [ ] Gráficos de evolução
+- [ ] Timezone: America/São_Paulo (BRT/BRST - UTC-3)
 
-### Triggers
-- Auto-atualização de `updated_at`
-- Cálculo automático de `duration_days`
+## 🔗 Backend
 
-### Views
-- `v_plants_stats` - Plantas com estatísticas
-- `v_latest_records` - Últimos registros
+O app mobile consome a mesma API do sistema web:
 
-## 📝 Logs e Debug
+- **URL**: `http://localhost:3000` (desenvolvimento)
+- **Endpoints**: 28 rotas (11 plantas + 17 sensores)
 
+## ⚙️ Configuração
+
+1. Instalar dependências:
 ```bash
-# Backend
-tail -f /tmp/grow-backend.log
-
-# Frontend
-tail -f /tmp/grow-frontend.log
+npm install
 ```
 
-## 🛠️ Tecnologias
+2. Iniciar o servidor de desenvolvimento:
+```bash
+npm start
+```
 
-**Backend:** Node.js, Express, SQLite, Multer  
-**Frontend:** React 18, TypeScript, Vite, date-fns
+3. Rodar no Android:
+```bash
+npm run android
+```
 
----
+4. Rodar no iOS:
+```bash
+npm run ios
+```
 
-**Versão:** 2.0.0 | **Data:** Dezembro 2025
+5. Rodar no navegador:
+```bash
+npm run web
+```
+
+## 📱 Desenvolvimento
+
+Este app **replica exatamente** as funcionalidades do sistema web.
+
+**Importante**: O backend deve estar rodando na porta 3000.
+
+## 🔄 Status
+
+**Branch**: `mobile`  
+**Status**: 🚧 Em desenvolvimento (estrutura inicial criada)
+
+### Próximos passos:
+1. Configurar navegação (Stack Navigator)
+2. Criar serviço de API (axios)
+3. Implementar telas principais
+4. Portar componentes do web
+5. Adicionar gráficos (react-native-chart-kit ou similar)
+
+## 📝 Notas
+
+- Node.js 18.19.1 (avisos de engine ignorados - funcional)
+- Expo SDK 52
+- React Native 0.81.5
+- Timezone: BRT/BRST (UTC-3)

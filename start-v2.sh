@@ -36,12 +36,10 @@ if [ -f "backend/package.json" ]; then
   echo -e "${GREEN}✅ Backend dependencies installed${NC}"
 fi
 
-# Frontend
-if [ -f "frontend/package.json" ]; then
-  cd frontend
+# App React Native
+if [ -f "package.json" ] && [ -f "app.json" ]; then
   npm install --silent
-  cd ..
-  echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
+  echo -e "${GREEN}✅ React Native app dependencies installed${NC}"
 fi
 
 echo ""
@@ -73,7 +71,7 @@ echo ""
 # ============================================
 echo -e "${YELLOW}🧹 Limpando processos anteriores...${NC}"
 pkill -f "node.*server.js" 2>/dev/null || true
-pkill -f "vite" 2>/dev/null || true
+pkill -f "expo" 2>/dev/null || true
 sleep 1
 echo -e "${GREEN}✅ Processos limpos${NC}\n"
 
@@ -92,12 +90,10 @@ cd ..
 # Aguardar backend inicializar
 sleep 2
 
-# Frontend
-cd frontend
-npm run dev > /tmp/grow-frontend.log 2>&1 &
-FRONTEND_PID=$!
-echo -e "${GREEN}✅ Frontend iniciado (PID: $FRONTEND_PID)${NC}"
-cd ..
+# App React Native
+npx expo start --lan > /tmp/grow-app.log 2>&1 &
+APP_PID=$!
+echo -e "${GREEN}✅ App React Native iniciado (PID: $APP_PID)${NC}"
 
 echo ""
 
@@ -106,12 +102,12 @@ echo ""
 # ============================================
 echo -e "${GREEN}✨ Sistema iniciado com sucesso!${NC}\n"
 echo -e "${BLUE}📍 URLs:${NC}"
-echo -e "   Backend:  http://localhost:3000"
-echo -e "   Frontend: http://localhost:5173"
+echo -e "   Backend:     http://localhost:3000"
+echo -e "   App React:   Use Expo Go ou simulador"
 echo ""
 echo -e "${BLUE}📋 Logs:${NC}"
-echo -e "   Backend:  tail -f /tmp/grow-backend.log"
-echo -e "   Frontend: tail -f /tmp/grow-frontend.log"
+echo -e "   Backend:     tail -f /tmp/grow-backend.log"
+echo -e "   App React:   tail -f /tmp/grow-app.log"
 echo ""
 echo -e "${YELLOW}Para parar o sistema, pressione Ctrl+C${NC}\n"
 
@@ -119,9 +115,9 @@ echo -e "${YELLOW}Para parar o sistema, pressione Ctrl+C${NC}\n"
 # 6. Aguardar e Limpar ao Sair
 # ============================================
 trap "echo -e '\n${YELLOW}🛑 Parando sistema...${NC}'; \
-      kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; \
+      kill $BACKEND_PID $APP_PID 2>/dev/null; \
       pkill -f 'node.*server.js' 2>/dev/null; \
-      pkill -f 'vite' 2>/dev/null; \
+      pkill -f 'expo' 2>/dev/null; \
       echo -e '${GREEN}✅ Sistema parado${NC}'; \
       exit 0" INT TERM
 
