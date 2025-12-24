@@ -232,6 +232,12 @@ export default function HomeScreen({ navigation }: Props) {
           >
             <Text style={styles.buttonText}>Gerenciar Sensores</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.analysisButton}
+            onPress={() => navigation.navigate('PlantAnalysis')}
+          >
+            <Text style={styles.buttonText}>📊 Análise de Planta</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
@@ -541,6 +547,12 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#2d5016',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  analysisButton: {
+    backgroundColor: '#FF9800',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',

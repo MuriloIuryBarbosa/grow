@@ -22,7 +22,7 @@ import axios from 'axios';
 type Props = NativeStackScreenProps<RootStackParamList, 'NewRecord'>;
 
 export default function NewRecordScreen({ route, navigation }: Props) {
-  const { plantId } = route.params;
+  const { plantId, prefilledSize } = route.params;
   const [loading, setLoading] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,6 +44,13 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const today = new Date().toISOString().split('T')[0];
+  
+  useEffect(() => {
+    if (prefilledSize) {
+      setSizeText(prefilledSize.toString());
+      updateField('plant_size', prefilledSize);
+    }
+  }, [prefilledSize]);
   
   useEffect(() => {
     if (showCamera && videoRef.current && Platform.OS === 'web') {

@@ -36,6 +36,7 @@ import ActivePlantsScreen from '../screens/ActivePlantsScreen';
 import DeadPlantsScreen from '../screens/DeadPlantsScreen';
 import GeneticMetricsScreen from '../screens/GeneticMetricsScreen';
 import BatchGerminationScreen from '../screens/BatchGerminationScreen';
+import PlantAnalysisScreen from '../screens/PlantAnalysisScreen';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.8;
@@ -45,7 +46,7 @@ export type RootStackParamList = {
   PlantDetail: { id: number };
   NewPlant: { seedBatchId?: number; cloneId?: number };
   EditPlant: { id: number };
-  NewRecord: { plantId: number };
+  NewRecord: { plantId: number; prefilledSize?: number };
   EditRecord: { plantId: number; recordId: number };
   RecordReading: undefined;
   NewSensorReading: { sensor_id: number; sensor_name: string };
@@ -59,6 +60,7 @@ export type RootStackParamList = {
   DeadPlants: undefined;
   BatchGermination: undefined;
   Sensors: undefined;
+  PlantAnalysis: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -415,6 +417,11 @@ export default function AppNavigator() {
             name="Sensors"
             component={SensorsScreen}
             options={{ title: 'Sensores' }}
+          />
+          <Stack.Screen
+            name="PlantAnalysis"
+            component={PlantAnalysisScreen}
+            options={{ title: 'Análise de Planta' }}
           />
         </Stack.Navigator>
       </DrawerProvider>
