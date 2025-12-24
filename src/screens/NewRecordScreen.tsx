@@ -32,6 +32,10 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [showDeviceSelection, setShowDeviceSelection] = useState(false);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<MediaDeviceInfo | null>(null);
+  const [isMeasuring, setIsMeasuring] = useState(false);
+  const [estimatedSize, setEstimatedSize] = useState<number | null>(null);
+  const [showSizeConfirmation, setShowSizeConfirmation] = useState(false);
+  const [confirmedSize, setConfirmedSize] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -188,6 +192,17 @@ export default function NewRecordScreen({ route, navigation }: Props) {
     }
   };
 
+  const handleMeasureOption = () => {
+    setShowOptions(false);
+    setIsMeasuring(true);
+    if (Platform.OS === 'web') {
+      setShowDeviceSelection(true);
+    } else {
+      // Para mobile, talvez usar câmera com AR ou algo, mas por enquanto, apenas câmera
+      cameraInputRef.current?.click();
+    }
+  };
+
   const handleFileOption = () => {
     setShowOptions(false);
     fileInputRef.current?.click();
@@ -207,13 +222,31 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         canvas.toBlob(blob => {
           if (blob) {
             const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-            setSelectedFile(file);
-            setImageUri(URL.createObjectURL(file));
-            setShowCamera(false);
-            // Stop stream
-            const stream = video.srcObject as MediaStream;
-            if (stream) {
-              stream.getTracks().forEach(track => track.stop());
+            if (isMeasuring) {
+              // Estimar tamanho
+              estimatePlantSize(file).then(size => {
+                setEstimatedSize(size);
+                setConfirmedSize(size.toString());
+                setShowSizeConfirmation(true);
+                setSelectedFile(file);
+                setImageUri(URL.createObjectURL(file));
+                setShowCamera(false);
+                setIsMeasuring(false);
+                // Stop stream
+                const stream = video.srcObject as MediaStream;
+                if (stream) {
+                  stream.getTracks().forEach(track => track.stop());
+                }
+              });
+            } else {
+              setSelectedFile(file);
+              setImageUri(URL.createObjectURL(file));
+              setShowCamera(false);
+              // Stop stream
+              const stream = video.srcObject as MediaStream;
+              if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+              }
             }
           }
         });
@@ -239,6 +272,23 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const cancelDeviceSelection = () => {
     setShowDeviceSelection(false);
+    setIsMeasuring(false);
+  };
+
+  const confirmSize = () => {
+    const size = parseFloat(confirmedSize);
+    if (!isNaN(size)) {
+      updateField('plant_size', size);
+    }
+    setShowSizeConfirmation(false);
+    setEstimatedSize(null);
+  };
+
+  const cancelSizeConfirmation = () => {
+    setShowSizeConfirmation(false);
+    setEstimatedSize(null);
+    setSelectedFile(null);
+    setImageUri(null);
   };
 
   const showPhotoOptions = () => {
@@ -451,6 +501,9 @@ export default function NewRecordScreen({ route, navigation }: Props) {
             <TouchableOpacity style={styles.optionButton} onPress={handleCameraOption}>
               <Text style={styles.optionButtonText}>📷 Tirar Foto</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.optionButton} onPress={handleMeasureOption}>
+              <Text style={styles.optionButtonText}>📏 Medir Tamanho da Planta</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.optionButton} onPress={handleFileOption}>
               <Text style={styles.optionButtonText}>💻 Escolher do Computador</Text>
             </TouchableOpacity>
@@ -487,6 +540,29 @@ export default function NewRecordScreen({ route, navigation }: Props) {
               </TouchableOpacity>
               <TouchableOpacity style={styles.cancelCameraButton} onPress={cancelCamera}>
                 <Text style={styles.cancelCameraButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+      {showSizeConfirmation && estimatedSize !== null && (
+        <View style={styles.sizeModal}>
+          <View style={styles.sizeContainer}>
+            <Text style={styles.sizeTitle}>Confirme o Tamanho da Planta</Text>
+            <Text style={styles.sizeText}>Tamanho estimado: {estimatedSize} cm</Text>
+            <TextInput
+              style={styles.sizeInput}
+              value={confirmedSize}
+              onChangeText={setConfirmedSize}
+              placeholder="Digite o tamanho em cm"
+              keyboardType="decimal-pad"
+            />
+            <View style={styles.sizeActions}>
+              <TouchableOpacity style={styles.confirmSizeButton} onPress={confirmSize}>
+                <Text style={styles.confirmSizeButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelSizeButton} onPress={cancelSizeConfirmation}>
+                <Text style={styles.cancelSizeButtonText}>Cancelar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -804,6 +880,76 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelDeviceButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sizeModal: {
+    position: 'absolute' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sizeContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    width: '80%',
+    maxWidth: 300,
+  },
+  sizeTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+  },
+  sizeText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 15,
+    color: '#555',
+  },
+  sizeInput: {
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  sizeActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  confirmSizeButton: {
+    backgroundColor: '#4CAF50',
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmSizeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelSizeButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelSizeButtonText: {
     color: '#666',
     fontSize: 16,
     fontWeight: '600',
