@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,10 +28,27 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
   const [showOptions, setShowOptions] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const today = new Date().toISOString().split('T')[0];
+  
+  useEffect(() => {
+    if (showCamera && videoRef.current && Platform.OS === 'web') {
+      navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }).catch(err => {
+        console.error('Error accessing camera:', err);
+        Alert.alert('Erro', 'Não foi possível acessar a câmera');
+        setShowCamera(false);
+      });
+    }
+  }, [showCamera]);
   
   const [formData, setFormData] = useState<Partial<DailyRecord>>({
     record_date: today,
@@ -145,7 +162,11 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const handleCameraOption = () => {
     setShowOptions(false);
-    cameraInputRef.current?.click();
+    if (Platform.OS === 'web') {
+      setShowCamera(true);
+    } else {
+      cameraInputRef.current?.click();
+    }
   };
 
   const handleFileOption = () => {
@@ -155,6 +176,40 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const cancelOptions = () => {
     setShowOptions(false);
+  };
+
+  const capturePhoto = () => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (canvas && video && Platform.OS === 'web') {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          if (blob) {
+            const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+            setSelectedFile(file);
+            setImageUri(URL.createObjectURL(file));
+            setShowCamera(false);
+            // Stop stream
+            const stream = video.srcObject as MediaStream;
+            if (stream) {
+              stream.getTracks().forEach(track => track.stop());
+            }
+          }
+        });
+      }
+    }
+  };
+
+  const cancelCamera = () => {
+    setShowCamera(false);
+    if (videoRef.current) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
   };
 
   const showPhotoOptions = () => {
@@ -376,6 +431,23 @@ export default function NewRecordScreen({ route, navigation }: Props) {
           </View>
         </View>
       )}
+      {showCamera && Platform.OS === 'web' && (
+        <View style={styles.cameraModal}>
+          <View style={styles.cameraContainer}>
+            <Text style={styles.cameraTitle}>Tirar Foto</Text>
+            <video ref={videoRef} autoPlay style={{ width: '100%', height: 300, borderRadius: 8 }} />
+            <canvas ref={canvasRef} style={{ display: 'none' }} width={640} height={480} />
+            <View style={styles.cameraActions}>
+              <TouchableOpacity style={styles.captureButton} onPress={capturePhoto}>
+                <Text style={styles.captureButtonText}>📷 Capturar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelCameraButton} onPress={cancelCamera}>
+                <Text style={styles.cancelCameraButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
       {Platform.OS === 'web' && (
         <>
           <input
@@ -584,6 +656,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelOptionButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cameraModal: {
+    position: 'absolute' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  cameraTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+  },
+  cameraActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  captureButton: {
+    backgroundColor: '#4CAF50',
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  captureButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelCameraButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelCameraButtonText: {
     color: '#666',
     fontSize: 16,
     fontWeight: '600',
