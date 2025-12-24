@@ -272,6 +272,18 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
     return { totalDays, daysFromGermination, currentPhaseDays };
   };
 
+  const getPhaseStartDates = () => {
+    if (!plant?.phase_history) return { mudaStartDate: null, vegetacaoStartDate: null };
+
+    const mudaPhase = plant.phase_history.find(h => h.phase === 'muda');
+    const vegetacaoPhase = plant.phase_history.find(h => h.phase === 'vegetacao');
+
+    return {
+      mudaStartDate: mudaPhase?.started_at || null,
+      vegetacaoStartDate: vegetacaoPhase?.started_at || null,
+    };
+  };
+
   const getPhaseLabel = (phase: string) => {
     switch (phase) {
       case 'germinacao': return '🌱 Germinação';
@@ -303,6 +315,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
   }
 
   const stats = calculateStats();
+  const phaseDates = getPhaseStartDates();
 
   return (
     <ScrollView
@@ -437,6 +450,18 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
             <InfoItem
               label="Data de Germinação"
               value={formatDate(plant.germination_date)}
+            />
+          )}
+          {phaseDates.mudaStartDate && (
+            <InfoItem
+              label="Início da Muda"
+              value={formatDate(phaseDates.mudaStartDate)}
+            />
+          )}
+          {phaseDates.vegetacaoStartDate && (
+            <InfoItem
+              label="Início da Vegetação"
+              value={formatDate(phaseDates.vegetacaoStartDate)}
             />
           )}
         </View>
