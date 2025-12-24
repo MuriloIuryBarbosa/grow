@@ -28,6 +28,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const today = new Date().toISOString().split('T')[0];
   
@@ -143,7 +144,15 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const showPhotoOptions = () => {
     if (Platform.OS === 'web') {
-      fileInputRef.current?.click();
+      Alert.alert(
+        'Adicionar Foto',
+        'Escolha uma opção',
+        [
+          { text: 'Tirar Foto', onPress: () => cameraInputRef.current?.click() },
+          { text: 'Escolher do Computador', onPress: () => fileInputRef.current?.click() },
+          { text: 'Cancelar', style: 'cancel' },
+        ]
+      );
     } else {
       Alert.alert(
         'Adicionar Foto',
@@ -345,19 +354,35 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
       {Platform.OS === 'web' && (
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-              setSelectedFile(file);
-              setImageUri(URL.createObjectURL(file));
-            }
-          }}
-        />
+        <>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (file) {
+                setSelectedFile(file);
+                setImageUri(URL.createObjectURL(file));
+              }
+            }}
+          />
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            ref={cameraInputRef}
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (file) {
+                setSelectedFile(file);
+                setImageUri(URL.createObjectURL(file));
+              }
+            }}
+          />
+        </>
       )}
     </KeyboardAvoidingView>
   );
