@@ -31,6 +31,7 @@ export default function PlantAnalysisScreen({ navigation }: Props) {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -86,17 +87,25 @@ export default function PlantAnalysisScreen({ navigation }: Props) {
   }, []);
 
   const analyzeCurrentFrame = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current || analyzing) return;
+    if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current || analyzing) return;
 
     setAnalyzing(true);
     const canvas = canvasRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
     const video = videoRef.current;
     const ctx = canvas.getContext('2d');
+    const overlayCtx = overlayCanvas.getContext('2d');
 
-    if (ctx) {
-      canvas.width = video.videoWidth / 4; // Reduzir resolução para performance
+    if (ctx && overlayCtx) {
+      // Configurar canvas para análise
+      canvas.width = video.videoWidth / 4; // Reduzir resolução
       canvas.height = video.videoHeight / 4;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Configurar overlay canvas
+      overlayCanvas.width = video.videoWidth;
+      overlayCanvas.height = video.videoHeight;
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
@@ -104,25 +113,75 @@ export default function PlantAnalysisScreen({ navigation }: Props) {
       let greenPixels = 0;
       const totalPixels = data.length / 4;
 
+      // Analisar pixels e opcionalmente destacar
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Detectar pixels verdes (folhas)
         if (g > r + 20 && g > b + 20 && g > 50) {
           greenPixels++;
+          // Opcional: destacar pixels verdes no overlay (mas pode ser pesado)
+          // const x = (i / 4) % canvas.width;
+          // const y = Math.floor((i / 4) / canvas.width);
+          // overlayCtx.fillStyle = 'rgba(0,255,0,0.3)';
+          // overlayCtx.fillRect(x * 4, y * 4, 4, 4);
         }
       }
 
-      // Estimar tamanho baseado na porcentagem de pixels verdes
       const greenRatio = greenPixels / totalPixels;
       const estimatedSize = Math.max(5, Math.min(100, 10 + (greenRatio * 80)));
 
       setCurrentSize(Math.round(estimatedSize * 10) / 10);
+
+      // Desenhar régua virtual
+      drawVirtualRuler(overlayCtx, overlayCanvas.width, overlayCanvas.height, estimatedSize);
     }
     setAnalyzing(false);
   }, [analyzing]);
+
+  const drawVirtualRuler = (ctx: CanvasRenderingContext2D, width: number, height: number, sizeCm: number) => {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    
+    // Assumir uma escala: 1cm = 50 pixels (ajustável)
+    const pixelsPerCm = 50;
+    const rulerLength = sizeCm * pixelsPerCm;
+    
+    // Desenhar régua horizontal no centro
+    const startX = centerX - rulerLength / 2;
+    const endX = centerX + rulerLength / 2;
+    const rulerY = centerY;
+    
+    // Linha principal
+    ctx.strokeStyle = '#FF0000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(startX, rulerY);
+    ctx.lineTo(endX, rulerY);
+    ctx.stroke();
+    
+    // Marcas a cada 1cm
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    for (let i = 0; i <= sizeCm; i++) {
+      const x = startX + (i * pixelsPerCm);
+      ctx.beginPath();
+      ctx.moveTo(x, rulerY - 10);
+      ctx.lineTo(x, rulerY + 10);
+      ctx.stroke();
+      
+      // Texto
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '16px Arial';
+      ctx.fillText(`${i}cm`, x - 10, rulerY - 15);
+    }
+    
+    // Texto do tamanho total
+    ctx.fillStyle = '#FF0000';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText(`Tamanho: ${sizeCm}cm`, centerX - 60, centerY + 40);
+  };
 
   const selectDevice = (device: MediaDeviceInfo) => {
     setSelectedDevice(device);
@@ -192,7 +251,21 @@ export default function PlantAnalysisScreen({ navigation }: Props) {
 
       {showCamera && Platform.OS === 'web' && (
         <View style={styles.cameraContainer}>
-          <video ref={videoRef} autoPlay style={{ width: '100%', height: 300, borderRadius: 8 }} />
+          <View style={styles.videoContainer}>
+            <video ref={videoRef} autoPlay style={{ width: '100%', height: 300, borderRadius: 8 }} />
+            <canvas 
+              ref={overlayCanvasRef} 
+              style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                width: '100%', 
+                height: 300, 
+                borderRadius: 8,
+                pointerEvents: 'none'
+              }} 
+            />
+          </View>
           <canvas ref={canvasRef} style={{ display: 'none' }} />
 
           <View style={styles.analysisContainer}>
@@ -310,6 +383,9 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
+  },
+  videoContainer: {
+    position: 'relative',
   },
   analysisContainer: {
     backgroundColor: '#fff',
