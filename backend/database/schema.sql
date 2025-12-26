@@ -191,21 +191,25 @@ INNER JOIN (
     GROUP BY plant_id
 ) latest ON dr.plant_id = latest.plant_id AND dr.record_date = latest.max_date;
 
--- ============================================
--- CONFIGURAÇÕES DO BANCO
--- ============================================
 
--- Habilitar foreign keys
 PRAGMA foreign_keys = ON;
 
--- Modo WAL para melhor performance
 PRAGMA journal_mode = WAL;
 
--- Sincronização normal (balance entre segurança e velocidade)
 PRAGMA synchronous = NORMAL;
 
--- Cache de 64MB
 PRAGMA cache_size = -64000;
 
--- Armazenar temporários em memória
 PRAGMA temp_store = MEMORY;
+
+-- ============================================
+-- TABELA: daily_record_photos
+-- Armazena múltiplas fotos por registro diário
+-- ============================================
+CREATE TABLE IF NOT EXISTS daily_record_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_id INTEGER NOT NULL,
+    photo_path TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (record_id) REFERENCES daily_records(id) ON DELETE CASCADE
+);

@@ -72,9 +72,20 @@ export const recordsAPI = {
     return data;
   },
   
-  create: async (plantId: number, recordData: Partial<DailyRecord>) => {
-    const { data } = await api.post<DailyRecord>(`/records`, { ...recordData, plant_id: plantId });
-    return data;
+  create: async (plantId: number, recordData: Partial<DailyRecord> | FormData) => {
+    if (recordData instanceof FormData) {
+      // Envio de arquivos (web)
+      const res = await axios.post(`${API_BASE_URL}/records`, recordData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return res.data;
+    } else {
+      // Envio padrão (mobile)
+      const { data } = await api.post<DailyRecord>(`/records`, { ...recordData, plant_id: plantId });
+      return data;
+    }
   },
   
   update: async (plantId: number, recordId: number, recordData: Partial<DailyRecord>) => {

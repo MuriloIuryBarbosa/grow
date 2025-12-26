@@ -24,8 +24,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'NewRecord'>;
 export default function NewRecordScreen({ route, navigation }: Props) {
   const { plantId, prefilledSize } = route.params;
   const [loading, setLoading] = useState(false);
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imageUris, setImageUris] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
   const [showOptions, setShowOptions] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -107,39 +107,27 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
     setLoading(true);
     try {
-      let photoPath = undefined;
-      
-      // Upload da foto se existir
-      if (imageUri) {
-        const uploadFormData = new FormData();
-        if (Platform.OS === 'web' && selectedFile) {
-          uploadFormData.append('photo', selectedFile);
-        } else {
-          const filename = imageUri.split('/').pop() || 'photo.jpg';
-          const match = /\.([\w]+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : 'image/jpeg';
-          
-          uploadFormData.append('photo', {
-            uri: imageUri,
-            name: filename,
-            type,
-          } as any);
+      const uploadFormData = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          uploadFormData.append(key, value);
         }
+      });
+      uploadFormData.append('plant_id', plantId);
+      // Adicionar todas as fotos
+      selectedFiles.forEach((file) => {
+        uploadFormData.append('photos', file);
+      });
 
-        const uploadResponse = await axios.post(
-          `${API_BASE_URL}/api/upload`,
-          uploadFormData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          }
-        );
-        
-        photoPath = uploadResponse.data.photoPath;
-      }
-
-      await recordsAPI.create(plantId, { ...formData, photo_path: photoPath });
+      await axios.post(
+        `${API_BASE_URL}/records`,
+        uploadFormData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
       Alert.alert('Sucesso', 'Registro criado com sucesso', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -153,25 +141,6 @@ export default function NewRecordScreen({ route, navigation }: Props) {
 
   const updateField = (field: keyof DailyRecord, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Erro', 'Precisamos de permissão para acessar suas fotos');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
   };
 
   const takePhoto = async () => {
@@ -188,13 +157,32 @@ export default function NewRecordScreen({ route, navigation }: Props) {
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      setImageUris(prev => [...prev, result.assets[0].uri]);
     }
   };
 
-  const removePhoto = () => {
-    setImageUri(null);
-    setSelectedFile(null);
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Erro', 'Precisamos de permissão para acessar suas fotos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: [ImagePicker.MediaType.Images],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const uris = result.assets.map(a => a.uri);
+      setImageUris(prev => [...prev, ...uris]);
+    }
+  };
+
+  const removePhoto = (idx: number) => {
+    setImageUris(prev => prev.filter((_, i) => i !== idx));
+    setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleCameraOption = () => {
@@ -244,8 +232,8 @@ export default function NewRecordScreen({ route, navigation }: Props) {
                 setEstimatedSize(size);
                 setConfirmedSize(size.toString());
                 setShowSizeConfirmation(true);
-                setSelectedFile(file);
-                setImageUri(URL.createObjectURL(file));
+                setSelectedFiles(prev => [...prev, file]);
+                setImageUris(prev => [...prev, URL.createObjectURL(file)]);
                 setShowCamera(false);
                 setIsMeasuring(false);
                 setVideoReady(false);
@@ -263,8 +251,8 @@ export default function NewRecordScreen({ route, navigation }: Props) {
                 setVideoReady(false);
               });
             } else {
-              setSelectedFile(file);
-              setImageUri(URL.createObjectURL(file));
+              setSelectedFiles(prev => [...prev, file]);
+              setImageUris(prev => [...prev, URL.createObjectURL(file)]);
               setShowCamera(false);
               setVideoReady(false);
               // Stop stream
@@ -315,8 +303,8 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const cancelSizeConfirmation = () => {
     setShowSizeConfirmation(false);
     setEstimatedSize(null);
-    setSelectedFile(null);
-    setImageUri(null);
+    setSelectedFiles(prev => []);
+    setImageUris(prev => []);
   };
 
   const estimatePlantSize = async (file: File): Promise<number> => {
@@ -512,33 +500,26 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Foto</Text>
-          {imageUri ? (
-            <View>
-              <Image source={{ uri: imageUri }} style={styles.photoPreview} />
-              <View style={styles.photoActions}>
-                <TouchableOpacity
-                  style={[styles.button, styles.changePhotoButton]}
-                  onPress={showPhotoOptions}
-                >
-                  <Text style={styles.changePhotoButtonText}>📷 Alterar Foto</Text>
-                </TouchableOpacity>
+          <Text style={styles.label}>Fotos</Text>
+          <ScrollView horizontal>
+            {imageUris.map((uri, idx) => (
+              <View key={uri} style={{ marginRight: 8 }}>
+                <Image source={{ uri }} style={styles.photoPreview} />
                 <TouchableOpacity
                   style={[styles.button, styles.removePhotoButton]}
-                  onPress={removePhoto}
+                  onPress={() => removePhoto(idx)}
                 >
                   <Text style={styles.removePhotoButtonText}>🗑️ Remover</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
+            ))}
             <TouchableOpacity
               style={[styles.button, styles.addPhotoButton]}
               onPress={showPhotoOptions}
             >
               <Text style={styles.addPhotoButtonText}>📷 Adicionar Foto</Text>
             </TouchableOpacity>
-          )}
+          </ScrollView>
         </View>
 
         <View style={styles.actions}>
@@ -653,28 +634,26 @@ export default function NewRecordScreen({ route, navigation }: Props) {
           <input
             type="file"
             accept="image/*"
+            multiple
             ref={fileInputRef}
             style={{ display: 'none' }}
             onChange={(e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (file) {
-                setSelectedFile(file);
-                setImageUri(URL.createObjectURL(file));
-              }
+              const files = Array.from((e.target as HTMLInputElement).files || []);
+              setSelectedFiles(prev => [...prev, ...files]);
+              setImageUris(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
             }}
           />
           <input
             type="file"
             accept="image/*"
             capture="environment"
+            multiple
             ref={cameraInputRef}
             style={{ display: 'none' }}
             onChange={(e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (file) {
-                setSelectedFile(file);
-                setImageUri(URL.createObjectURL(file));
-              }
+              const files = Array.from((e.target as HTMLInputElement).files || []);
+              setSelectedFiles(prev => [...prev, ...files]);
+              setImageUris(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
             }}
           />
         </>

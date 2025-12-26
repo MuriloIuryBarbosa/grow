@@ -1,9 +1,22 @@
 import express, { Request, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
 import { PlantModel, DailyRecordModel, StatisticsModel, GeneticStrainModel, SeedBatchModel } from './models';
 import { Plant, DailyRecord } from './types';
 import db from './database';
 
 const router = express.Router();
+// Configuração do multer para múltiplos arquivos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../../uploads'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage });
 
 // ===== ROTAS DE PLANTAS =====
 
@@ -20,32 +33,43 @@ router.get('/plants', (req: Request, res: Response) => {
 // Buscar planta por ID ou código
 router.get('/plants/:identifier', (req: Request, res: Response) => {
   try {
+    console.log('🔍 Buscando planta com identifier:', req.params.identifier);
     const { identifier } = req.params;
     let plant;
 
     // Tentar como ID primeiro
     if (!isNaN(Number(identifier))) {
+      console.log('📊 Tentando buscar como ID:', Number(identifier));
       plant = PlantModel.findById(Number(identifier));
+      console.log('✅ Planta encontrada por ID:', plant ? 'sim' : 'não');
     }
     
     // Se não encontrou, tentar como código
     if (!plant) {
+      console.log('🏷️  Tentando buscar como código:', identifier);
       plant = PlantModel.findByCode(identifier);
+      console.log('✅ Planta encontrada por código:', plant ? 'sim' : 'não');
     }
 
     if (!plant) {
+      console.log('❌ Planta não encontrada');
       return res.status(404).json({ error: 'Planta não encontrada' });
     }
 
+    console.log('📋 Buscando detalhes da planta ID:', plant.id);
     // Buscar registros diários da planta
     const plantWithDetails = PlantModel.findByIdWithDetails(plant.id!);
+    console.log('✅ Detalhes encontrados:', plantWithDetails ? 'sim' : 'não');
     
     if (!plantWithDetails) {
+      console.log('❌ Detalhes da planta não encontrados');
       return res.status(404).json({ error: 'Planta não encontrada' });
     }
 
+    console.log('📤 Retornando dados da planta');
     res.json(plantWithDetails);
   } catch (error) {
+    console.error('💥 Erro ao buscar planta:', error);
     res.status(500).json({ error: 'Erro ao buscar planta' });
   }
 });
@@ -569,31 +593,6 @@ router.get('/records/:id', (req: Request, res: Response) => {
   }
 });
 
-// Criar registro diário
-router.post('/records', (req: Request, res: Response) => {
-  try {
-    const recordData: Omit<DailyRecord, 'id' | 'created_at'> = req.body;
-
-    // Validações
-    if (!recordData.plant_id || !recordData.record_date) {
-      return res.status(400).json({ 
-        error: 'Campos obrigatórios: plant_id, record_date' 
-      });
-    }
-
-    // Verificar se a planta existe
-    const plant = PlantModel.findById(recordData.plant_id);
-    if (!plant) {
-      return res.status(404).json({ error: 'Planta não encontrada' });
-    }
-
-    const record = DailyRecordModel.create(recordData);
-    res.status(201).json(record);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Erro ao criar registro' });
-  }
-});
-
 // Atualizar registro
 router.put('/records/:id', (req: Request, res: Response) => {
   try {
@@ -659,28 +658,39 @@ router.get('/statistics/plant/:id', (req: Request, res: Response) => {
 // ===== ROTAS DE SENSORES =====
 
 // Listar todos os sensores
-router.get('/sensors', (req: Request, res: Response) => {
+router.post('/records', upload.array('photos', 10), (req: Request, res: Response) => {
   try {
-    const sensors = db.prepare('SELECT * FROM sensors ORDER BY is_active DESC, name ASC').all();
-    res.json(sensors);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar sensores' });
-  }
-});
+    // Dados do registro (exceto fotos)
+    const recordData: Omit<DailyRecord, 'id' | 'created_at' | 'photo_path'> = req.body;
 
-// Buscar sensor por ID
-router.get('/sensors/:id', (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-    const sensor = db.prepare('SELECT * FROM sensors WHERE id = ?').get(id);
-    
-    if (!sensor) {
-      return res.status(404).json({ error: 'Sensor não encontrado' });
+    // Validações
+    if (!recordData.plant_id || !recordData.record_date) {
+      return res.status(400).json({ 
+        error: 'Campos obrigatórios: plant_id, record_date' 
+      });
     }
 
-    res.json(sensor);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar sensor' });
+    // Verificar se a planta existe
+    const plant = PlantModel.findById(Number(recordData.plant_id));
+    if (!plant) {
+      return res.status(404).json({ error: 'Planta não encontrada' });
+    }
+
+    // Criar registro diário
+    const record = DailyRecordModel.create({ ...recordData, plant_id: Number(recordData.plant_id) });
+
+    // Salvar caminhos das fotos na tabela daily_record_photos
+    if (req.files && Array.isArray(req.files)) {
+      const db = require('./database').default;
+      const stmt = db.prepare('INSERT INTO daily_record_photos (record_id, photo_path) VALUES (?, ?)');
+      req.files.forEach((file: any) => {
+        stmt.run(record.id, file.filename);
+      });
+    }
+
+    res.status(201).json(record);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao criar registro' });
   }
 });
 
