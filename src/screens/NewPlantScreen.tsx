@@ -128,6 +128,7 @@ export default function NewPlantScreen({ navigation }: Props) {
 
       // Remover campos vazios
       if (!plantData.genetic?.trim()) delete plantData.genetic;
+      if (!plantData.code?.trim()) delete plantData.code;
       if (!plantData.germination_date?.trim()) delete plantData.germination_date;
       if (!plantData.current_location?.trim()) delete plantData.current_location;
       delete plantData.substrate_other;

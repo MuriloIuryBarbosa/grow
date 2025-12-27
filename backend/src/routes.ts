@@ -79,10 +79,10 @@ router.post('/plants', (req: Request, res: Response) => {
   try {
     const plantData: Omit<Plant, 'id' | 'created_at'> = req.body;
 
-    // Validações básicas - apenas name e code são obrigatórios
-    if (!plantData.name || !plantData.code) {
+    // Validações básicas - apenas name é obrigatório
+    if (!plantData.name) {
       return res.status(400).json({ 
-        error: 'Campos obrigatórios: name, code' 
+        error: 'Campo obrigatório: name' 
       });
     }
 
@@ -96,10 +96,13 @@ router.post('/plants', (req: Request, res: Response) => {
       plantData.substrate = 'Não especificado';
     }
 
-    // Verificar se o código já existe
-    const existing = PlantModel.findByCode(plantData.code);
-    if (existing) {
-      return res.status(409).json({ error: 'Código já existe' });
+    // Se código não fornecido, será gerado automaticamente no modelo
+    // Verificar se o código já existe apenas se fornecido
+    if (plantData.code) {
+      const existing = PlantModel.findByCode(plantData.code);
+      if (existing) {
+        return res.status(409).json({ error: 'Código já existe' });
+      }
     }
 
     const plant = PlantModel.create(plantData);
@@ -660,11 +663,16 @@ router.get('/statistics/plant/:id', (req: Request, res: Response) => {
 // Listar todos os sensores
 router.post('/records', upload.array('photos', 10), (req: Request, res: Response) => {
   try {
+    console.log('📝 Recebendo requisição POST /records');
+    console.log('📦 Body:', req.body);
+    console.log('📸 Files:', req.files ? req.files.length : 0);
+
     // Dados do registro (exceto fotos)
     const recordData: Omit<DailyRecord, 'id' | 'created_at' | 'photo_path'> = req.body;
 
     // Validações
     if (!recordData.plant_id || !recordData.record_date) {
+      console.log('❌ Campos obrigatórios faltando:', { plant_id: recordData.plant_id, record_date: recordData.record_date });
       return res.status(400).json({ 
         error: 'Campos obrigatórios: plant_id, record_date' 
       });
@@ -673,11 +681,15 @@ router.post('/records', upload.array('photos', 10), (req: Request, res: Response
     // Verificar se a planta existe
     const plant = PlantModel.findById(Number(recordData.plant_id));
     if (!plant) {
+      console.log('❌ Planta não encontrada:', recordData.plant_id);
       return res.status(404).json({ error: 'Planta não encontrada' });
     }
 
+    console.log('✅ Planta encontrada:', plant.name);
+
     // Criar registro diário
     const record = DailyRecordModel.create({ ...recordData, plant_id: Number(recordData.plant_id) });
+    console.log('✅ Registro criado:', record.id);
 
     // Salvar caminhos das fotos na tabela daily_record_photos
     if (req.files && Array.isArray(req.files)) {
@@ -685,6 +697,7 @@ router.post('/records', upload.array('photos', 10), (req: Request, res: Response
       const stmt = db.prepare('INSERT INTO daily_record_photos (record_id, photo_path) VALUES (?, ?)');
       req.files.forEach((file: any) => {
         stmt.run(record.id, file.filename);
+        console.log('📸 Foto salva:', file.filename);
       });
     }
 
