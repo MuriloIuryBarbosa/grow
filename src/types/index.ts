@@ -129,6 +129,8 @@ export interface Plant {
   seed_batch_id?: number;
   source_clone_id?: number;
   origin_type?: 'seed' | 'clone' | 'unknown';
+  // Receita usada na germinação
+  germination_recipe_id?: number;
   created_at?: string;
   phase_history?: PhaseHistory[];
   // Campos da view v_plants_genetic_trace
@@ -161,6 +163,7 @@ export interface DailyRecord {
 export interface PlantWithRecords extends Plant {
   records?: DailyRecord[];
   phase_history?: PhaseHistory[];
+  germination_recipe?: Recipe;
   stats?: {
     days_in_current_phase?: number;
     phase_durations?: {
@@ -278,4 +281,18 @@ export interface GeneticMetrics {
   total_seeds_available: number;
   clones_generated: number;
   last_activity: string;
+}
+
+export interface Recipe {
+  id?: number;
+  name: string;
+  process_type: 'germination' | 'vegetation' | 'flowering';
+  ingredients: Array<{
+    name: string;
+    amount: number;
+    unit: string;
+  }>;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
 }

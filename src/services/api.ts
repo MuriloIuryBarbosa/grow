@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Plant, DailyRecord, Statistics, Sensor, SensorReading, GeneticStrain, SeedBatch, Clone } from '../types';
+import { Plant, DailyRecord, Statistics, Sensor, SensorReading, GeneticStrain, SeedBatch, Clone, Recipe } from '../types';
 
 // Para desenvolvimento, use o IP da sua máquina (não localhost)
 // iOS: Use o IP da rede local
@@ -367,6 +367,34 @@ export const geneticBankAPI = {
       plants_from_clones: number;
     }>('/genetic-bank/stats');
     return data;
+  },
+};
+
+// Recipes API
+export const recipesAPI = {
+  getAll: async (processType?: string) => {
+    const params = processType ? { process_type: processType } : {};
+    const { data } = await api.get<Recipe[]>('/recipes', { params });
+    return data;
+  },
+
+  getById: async (id: number) => {
+    const { data } = await api.get<Recipe>(`/recipes/${id}`);
+    return data;
+  },
+
+  create: async (recipeData: Omit<Recipe, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data } = await api.post<Recipe>('/recipes', recipeData);
+    return data;
+  },
+
+  update: async (id: number, recipeData: Partial<Omit<Recipe, 'id' | 'created_at'>>) => {
+    const { data } = await api.put<Recipe>(`/recipes/${id}`, recipeData);
+    return data;
+  },
+
+  delete: async (id: number) => {
+    await api.delete(`/recipes/${id}`);
   },
 };
 

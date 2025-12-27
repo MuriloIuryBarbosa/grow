@@ -46,6 +46,14 @@ db.exec(`
     FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS daily_record_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_id INTEGER NOT NULL,
+    photo_path TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (record_id) REFERENCES daily_records(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS phase_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plant_id INTEGER NOT NULL,

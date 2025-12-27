@@ -120,7 +120,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
       });
 
       await axios.post(
-        `${API_BASE_URL}/records`,
+        `${API_BASE_URL}/api/records`,
         uploadFormData,
         {
           headers: {
@@ -162,21 +162,88 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Erro', 'Precisamos de permissão para acessar suas fotos');
-      return;
-    }
+    console.log('🎯 pickImage called');
+    try {
+      // Verificar se o ImagePicker está disponível
+      if (!ImagePicker.launchImageLibraryAsync) {
+        console.error('❌ ImagePicker.launchImageLibraryAsync not available');
+        Alert.alert('Erro', 'Seletor de imagens não disponível neste dispositivo');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
+      console.log('📱 Requesting media library permissions...');
+      const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('📱 Media library permission status:', mediaStatus);
 
-    if (!result.canceled) {
-      const uris = result.assets.map(a => a.uri);
-      setImageUris(prev => [...prev, ...uris]);
+      if (mediaStatus !== 'granted') {
+        console.log('❌ Permission denied');
+        Alert.alert(
+          'Permissão necessária',
+          'Precisamos de permissão para acessar suas fotos. Vá em Configurações > Apps > ShuriGrow > Permissões e permita acesso às fotos.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Tentar novamente',
+              onPress: () => pickImage()
+            }
+          ]
+        );
+        return;
+      }
+
+      console.log('📸 Launching image library with simplified config...');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        quality: 0.8,
+        aspect: undefined,
+        exif: false,
+      });
+
+      console.log('📸 Raw result:', JSON.stringify(result, null, 2));
+
+      if (result && !result.canceled && result.assets && result.assets.length > 0) {
+        const uris = result.assets.map(a => a.uri);
+        console.log('🖼️ Selected images URIs:', uris);
+        setImageUris(prev => [...prev, ...uris]);
+
+        // Para web, converter para File objects
+        if (Platform.OS === 'web') {
+          try {
+            const files = await Promise.all(
+              result.assets.map(async (asset, index) => {
+                console.log(`📄 Converting asset ${index} to File...`);
+                const response = await fetch(asset.uri);
+                const blob = await response.blob();
+                const fileName = asset.fileName || `photo-${Date.now()}-${index}.jpg`;
+                return new File([blob], fileName, { type: 'image/jpeg' });
+              })
+            );
+            console.log('📄 Converted files:', files);
+            setSelectedFiles(prev => [...prev, ...files]);
+          } catch (fileError) {
+            console.error('💥 Error converting to files:', fileError);
+          }
+        }
+
+        Alert.alert('Sucesso', `${uris.length} imagem(ns) selecionada(s)`);
+      } else {
+        console.log('❌ No images selected or picker canceled');
+      }
+    } catch (error) {
+      console.error('💥 Error in pickImage:', error);
+      Alert.alert(
+        'Erro',
+        `Não foi possível acessar a galeria: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        [
+          { text: 'OK' },
+          {
+            text: 'Tentar novamente',
+            onPress: () => pickImage()
+          }
+        ]
+      );
     }
   };
 

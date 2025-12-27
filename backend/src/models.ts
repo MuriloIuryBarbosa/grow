@@ -117,8 +117,8 @@ export const PlantModel = {
     const stmt = db.prepare(`
       INSERT INTO plants (name, genetic, code, planting_date, germination_date, 
                          days_to_germination, substrate, substrate_other, current_phase, 
-                         current_location, status, photo_path, seed_batch_id, origin_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         current_location, status, photo_path, seed_batch_id, origin_type, germination_recipe_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const info = stmt.run(
@@ -135,7 +135,8 @@ export const PlantModel = {
       'ativa',
       plant.photo_path || null,
       plant.seed_batch_id || null,
-      plant.seed_batch_id ? 'seed' : (plant.origin_type || 'unknown')
+      plant.seed_batch_id ? 'seed' : (plant.origin_type || 'unknown'),
+      plant.germination_recipe_id || null
     );
 
     const plantId = info.lastInsertRowid as number;
@@ -188,6 +189,12 @@ export const PlantModel = {
     const phaseHistory = PhaseHistoryModel.findByPlantId(id);
     const currentPhaseHistory = PhaseHistoryModel.getCurrentPhase(id);
 
+    // Buscar receita de germinação se existir
+    let germinationRecipe: Recipe | undefined;
+    if (plant.germination_recipe_id) {
+      germinationRecipe = RecipeModel.findById(plant.germination_recipe_id);
+    }
+
     // Calcular tempo na fase atual
     let daysInCurrentPhase = 0;
     if (currentPhaseHistory) {
@@ -213,6 +220,7 @@ export const PlantModel = {
       ...plant,
       records,
       phase_history: phaseHistory,
+      germination_recipe: germinationRecipe,
       stats: {
         days_in_current_phase: daysInCurrentPhase,
         phase_durations: phaseDurations
@@ -872,6 +880,100 @@ export const SeedBatchModel = {
   // Deletar lote (soft delete)
   delete(id: number): boolean {
     const stmt = db.prepare('UPDATE seed_batches SET is_active = 0, updated_at = datetime(\'now\', \'localtime\') WHERE id = ?');
+    const info = stmt.run(id);
+    return info.changes > 0;
+  }
+};
+
+export const RecipeModel = {
+  // Criar nova receita
+  create(recipe: Omit<Recipe, 'id' | 'created_at' | 'updated_at'>): Recipe {
+    const stmt = db.prepare(`
+      INSERT INTO recipes (name, process_type, ingredients, description)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const info = stmt.run(
+      recipe.name,
+      recipe.process_type,
+      JSON.stringify(recipe.ingredients),
+      recipe.description || null
+    );
+
+    return { ...recipe, id: info.lastInsertRowid as number };
+  },
+
+  // Buscar todas as receitas
+  findAll(processType?: string): Recipe[] {
+    let query = 'SELECT * FROM recipes';
+    let params: any[] = [];
+
+    if (processType) {
+      query += ' WHERE process_type = ?';
+      params.push(processType);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const stmt = db.prepare(query);
+    const rows = stmt.all(...params) as any[];
+
+    return rows.map(row => ({
+      ...row,
+      ingredients: JSON.parse(row.ingredients)
+    }));
+  },
+
+  // Buscar receita por ID
+  findById(id: number): Recipe | undefined {
+    const stmt = db.prepare('SELECT * FROM recipes WHERE id = ?');
+    const row = stmt.get(id) as any;
+
+    if (!row) return undefined;
+
+    return {
+      ...row,
+      ingredients: JSON.parse(row.ingredients)
+    };
+  },
+
+  // Atualizar receita
+  update(id: number, updates: Partial<Omit<Recipe, 'id' | 'created_at'>>): boolean {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.name !== undefined) {
+      fields.push('name = ?');
+      values.push(updates.name);
+    }
+    if (updates.process_type !== undefined) {
+      fields.push('process_type = ?');
+      values.push(updates.process_type);
+    }
+    if (updates.ingredients !== undefined) {
+      fields.push('ingredients = ?');
+      values.push(JSON.stringify(updates.ingredients));
+    }
+    if (updates.description !== undefined) {
+      fields.push('description = ?');
+      values.push(updates.description);
+    }
+
+    if (fields.length === 0) return false;
+
+    fields.push('updated_at = datetime(\'now\', \'localtime\')');
+
+    const query = `UPDATE recipes SET ${fields.join(', ')} WHERE id = ?`;
+    values.push(id);
+
+    const stmt = db.prepare(query);
+    const info = stmt.run(...values);
+    return info.changes > 0;
+  },
+
+  // Deletar receita
+  delete(id: number): boolean {
+    const stmt = db.prepare('DELETE FROM recipes WHERE id = ?');
     const info = stmt.run(id);
     return info.changes > 0;
   }

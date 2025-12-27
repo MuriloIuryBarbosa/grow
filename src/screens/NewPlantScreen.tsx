@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { plantsAPI, seedBatchesAPI } from '../services/api';
-import { Plant, SeedBatch } from '../types';
+import { plantsAPI, seedBatchesAPI, recipesAPI } from '../services/api';
+import { Plant, SeedBatch, Recipe } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewPlant'>;
 
@@ -59,6 +59,10 @@ export default function NewPlantScreen({ navigation }: Props) {
   });
   const [showSubstrateOptions, setShowSubstrateOptions] = useState(false);
   const [showPhaseOptions, setShowPhaseOptions] = useState(false);
+  const [germinationRecipes, setGerminationRecipes] = useState<Recipe[]>([]);
+  const [loadingRecipes, setLoadingRecipes] = useState(true);
+  const [showRecipeModal, setShowRecipeModal] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   // Carregar lotes de sementes disponíveis
   useEffect(() => {
@@ -73,6 +77,21 @@ export default function NewPlantScreen({ navigation }: Props) {
       }
     };
     loadSeedBatches();
+  }, []);
+
+  // Carregar receitas de germinação
+  useEffect(() => {
+    const loadRecipes = async () => {
+      try {
+        const recipes = await recipesAPI.getAll('germination');
+        setGerminationRecipes(recipes);
+      } catch (error) {
+        console.error('Erro ao carregar receitas:', error);
+      } finally {
+        setLoadingRecipes(false);
+      }
+    };
+    loadRecipes();
   }, []);
 
   // Quando selecionar um lote de sementes, auto-preencher genética
@@ -92,6 +111,24 @@ export default function NewPlantScreen({ navigation }: Props) {
         ...prev,
         seed_batch_id: undefined,
         origin_type: 'unknown',
+      }));
+    }
+  };
+
+  // Quando selecionar uma receita de germinação
+  const handleRecipeSelect = (recipe: Recipe | null) => {
+    setSelectedRecipe(recipe);
+    setShowRecipeModal(false);
+    
+    if (recipe) {
+      setFormData(prev => ({
+        ...prev,
+        germination_recipe_id: recipe.id,
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        germination_recipe_id: undefined,
       }));
     }
   };
@@ -246,6 +283,49 @@ export default function NewPlantScreen({ navigation }: Props) {
           )}
           <Text style={styles.hint}>
             Vincule a planta a um lote do banco de sementes
+          </Text>
+        </View>
+
+        {/* Receita de Germinação */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>🍳 Receita de Germinação</Text>
+          <TouchableOpacity
+            style={[styles.selectButton, selectedRecipe && styles.selectButtonSelected]}
+            onPress={() => setShowRecipeModal(true)}
+            disabled={loadingRecipes}
+          >
+            {loadingRecipes ? (
+              <ActivityIndicator size="small" color="#4CAF50" />
+            ) : (
+              <>
+                <View style={styles.seedBatchSelectContent}>
+                  {selectedRecipe ? (
+                    <>
+                      <Text style={styles.seedBatchSelectCode}>{selectedRecipe.name}</Text>
+                      <Text style={styles.seedBatchSelectGenetic}>
+                        {selectedRecipe.ingredients.length} ingredientes
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.selectButtonPlaceholder}>
+                      Selecionar receita de germinação (opcional)
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.selectArrow}>▼</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          {selectedRecipe && (
+            <TouchableOpacity
+              style={styles.clearSeedBatchButton}
+              onPress={() => handleRecipeSelect(null)}
+            >
+              <Text style={styles.clearSeedBatchText}>✕ Remover seleção</Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.hint}>
+            Selecione uma receita para acompanhar o processo de germinação
           </Text>
         </View>
 
@@ -502,6 +582,91 @@ export default function NewPlantScreen({ navigation }: Props) {
                   </TouchableOpacity>
                 ))
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Seleção de Receita de Germinação */}
+      <Modal
+        visible={showRecipeModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRecipeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Selecionar Receita de Germinação</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowRecipeModal(false)}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              {/* Opção para não selecionar receita */}
+              <TouchableOpacity
+                style={[
+                  styles.seedBatchItem,
+                  !selectedRecipe && styles.seedBatchItemSelected,
+                ]}
+                onPress={() => handleRecipeSelect(null)}
+              >
+                <View style={styles.seedBatchItemContent}>
+                  <Text style={styles.seedBatchItemCode}>Nenhuma receita</Text>
+                  <Text style={styles.seedBatchItemGenetic}>
+                    Criar planta sem receita específica
+                  </Text>
+                </View>
+                {!selectedRecipe && (
+                  <Text style={styles.seedBatchItemCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+
+              {germinationRecipes.map((recipe) => (
+                <TouchableOpacity
+                  key={recipe.id}
+                  style={[
+                    styles.seedBatchItem,
+                    selectedRecipe?.id === recipe.id && styles.seedBatchItemSelected,
+                  ]}
+                  onPress={() => handleRecipeSelect(recipe)}
+                >
+                  <View style={styles.seedBatchItemContent}>
+                    <View style={styles.seedBatchItemHeader}>
+                      <Text style={styles.seedBatchItemCode}>{recipe.name}</Text>
+                      <View style={styles.seedBatchQuantityBadge}>
+                        <Text style={styles.seedBatchQuantityText}>
+                          {recipe.ingredients.length} ingredientes
+                        </Text>
+                      </View>
+                    </View>
+                    {recipe.description && (
+                      <Text style={styles.seedBatchItemGenetic}>
+                        {recipe.description}
+                      </Text>
+                    )}
+                    <View style={styles.recipeIngredients}>
+                      {recipe.ingredients.slice(0, 2).map((ing, index) => (
+                        <Text key={index} style={styles.recipeIngredient}>
+                          • {ing.amount} {ing.unit} de {ing.name}
+                        </Text>
+                      ))}
+                      {recipe.ingredients.length > 2 && (
+                        <Text style={styles.recipeIngredient}>
+                          ... e mais {recipe.ingredients.length - 2} ingredientes
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  {selectedRecipe?.id === recipe.id && (
+                    <Text style={styles.seedBatchItemCheck}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>
@@ -812,5 +977,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#4CAF50',
     marginLeft: 12,
+  },
+  recipeIngredients: {
+    marginTop: 8,
+  },
+  recipeIngredient: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
   },
 });

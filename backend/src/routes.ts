@@ -1,8 +1,8 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { PlantModel, DailyRecordModel, StatisticsModel, GeneticStrainModel, SeedBatchModel } from './models';
-import { Plant, DailyRecord } from './types';
+import { PlantModel, DailyRecordModel, StatisticsModel, GeneticStrainModel, SeedBatchModel, RecipeModel } from './models';
+import { Plant, DailyRecord, Recipe } from './types';
 import db from './database';
 
 const router = express.Router();
@@ -1087,6 +1087,95 @@ router.get('/statistics/genetic-metrics', (req: Request, res: Response) => {
       error: 'Erro ao buscar métricas genéticas', 
       details: error instanceof Error ? error.message : 'Erro desconhecido' 
     });
+  }
+});
+
+// ===== ROTAS DE RECEITAS =====
+
+// Listar todas as receitas
+router.get('/recipes', (req: Request, res: Response) => {
+  try {
+    const { process_type } = req.query;
+    const recipes = RecipeModel.findAll(process_type as string);
+    res.json(recipes);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar receitas' });
+  }
+});
+
+// Buscar receita por ID
+router.get('/recipes/:id', (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const recipe = RecipeModel.findById(id);
+    if (!recipe) {
+      return res.status(404).json({ error: 'Receita não encontrada' });
+    }
+    res.json(recipe);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar receita' });
+  }
+});
+
+// Criar nova receita
+router.post('/recipes', (req: Request, res: Response) => {
+  try {
+    const recipeData: Omit<Recipe, 'id' | 'created_at' | 'updated_at'> = req.body;
+
+    // Validações
+    if (!recipeData.name || !recipeData.process_type || !recipeData.ingredients) {
+      return res.status(400).json({ 
+        error: 'Campos obrigatórios: name, process_type, ingredients' 
+      });
+    }
+
+    // Validar ingredients
+    if (!Array.isArray(recipeData.ingredients) || recipeData.ingredients.length === 0) {
+      return res.status(400).json({ error: 'Ingredients deve ser um array não vazio' });
+    }
+
+    for (const ingredient of recipeData.ingredients) {
+      if (!ingredient.name || typeof ingredient.amount !== 'number' || !ingredient.unit) {
+        return res.status(400).json({ error: 'Cada ingredient deve ter name, amount (number) e unit' });
+      }
+    }
+
+    const recipe = RecipeModel.create(recipeData);
+    res.status(201).json(recipe);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Erro ao criar receita' });
+  }
+});
+
+// Atualizar receita
+router.put('/recipes/:id', (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const updates: Partial<Omit<Recipe, 'id' | 'created_at'>> = req.body;
+
+    const success = RecipeModel.update(id, updates);
+    if (!success) {
+      return res.status(404).json({ error: 'Receita não encontrada' });
+    }
+
+    const updated = RecipeModel.findById(id);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar receita' });
+  }
+});
+
+// Deletar receita
+router.delete('/recipes/:id', (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const success = RecipeModel.delete(id);
+    if (!success) {
+      return res.status(404).json({ error: 'Receita não encontrada' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao deletar receita' });
   }
 });
 

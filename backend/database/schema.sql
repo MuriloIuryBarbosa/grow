@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS plants (
     failure_date TEXT,
     failure_reason TEXT,
     
+    -- Receita usada na germinação
+    germination_recipe_id INTEGER,
+    
     -- Metadados
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -212,4 +215,18 @@ CREATE TABLE IF NOT EXISTS daily_record_photos (
     photo_path TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY (record_id) REFERENCES daily_records(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- TABELA: recipes
+-- Receitas para processos de cultivo
+-- ============================================
+CREATE TABLE IF NOT EXISTS recipes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL CHECK(length(name) >= 2),
+    process_type TEXT NOT NULL CHECK(process_type IN ('germination', 'vegetation', 'flowering')),
+    ingredients TEXT NOT NULL, -- JSON array: [{name: string, amount: number, unit: string}]
+    description TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
