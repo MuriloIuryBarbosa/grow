@@ -37,6 +37,7 @@ import DeadPlantsScreen from '../screens/DeadPlantsScreen';
 import GeneticMetricsScreen from '../screens/GeneticMetricsScreen';
 import BatchGerminationScreen from '../screens/BatchGerminationScreen';
 import PlantAnalysisScreen from '../screens/PlantAnalysisScreen';
+import RecipesScreen from '../screens/RecipesScreen';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.8;
@@ -61,6 +62,7 @@ export type RootStackParamList = {
   BatchGermination: undefined;
   Sensors: undefined;
   PlantAnalysis: undefined;
+  Recipes: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -154,7 +156,12 @@ function CustomDrawer({ navigation, closeDrawer }: { navigation: any; closeDrawe
             onPress={() => navigateTo('GeneticBank')}
           />
           <MenuItem
-            icon="🌱"
+            icon="�"
+            label="Receitas"
+            onPress={() => navigateTo('Recipes')}
+          />
+          <MenuItem
+            icon="�🌱"
             label="Germinação em Lote"
             onPress={() => navigateTo('BatchGermination')}
           />
@@ -422,6 +429,11 @@ export default function AppNavigator() {
             name="PlantAnalysis"
             component={PlantAnalysisScreen}
             options={{ title: 'Análise de Planta' }}
+          />
+          <Stack.Screen
+            name="Recipes"
+            component={RecipesScreen}
+            options={{ title: 'Receitas' }}
           />
         </Stack.Navigator>
       </DrawerProvider>

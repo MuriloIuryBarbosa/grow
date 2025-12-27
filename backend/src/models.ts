@@ -1,5 +1,5 @@
 import db from './database';
-import { Plant, DailyRecord, PlantWithRecords, Statistics, PhaseHistory, GeneticStrain, SeedBatch, Clone } from './types';
+import { Plant, DailyRecord, PlantWithRecords, Statistics, PhaseHistory, GeneticStrain, SeedBatch, Clone, Recipe } from './types';
 import { differenceInDays, parseISO, format } from 'date-fns';
 
 export const PhaseHistoryModel = {
