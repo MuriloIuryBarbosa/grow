@@ -25,7 +25,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
   const { plantId, prefilledSize } = route.params;
   const [loading, setLoading] = useState(false);
   const [imageUris, setImageUris] = useState<string[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [sizeText, setSizeText] = useState(''); // Estado para texto do tamanho (permite decimais)
   const [showOptions, setShowOptions] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -114,6 +114,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         }
       });
       uploadFormData.append('plant_id', plantId);
+      console.log('Selected files count:', selectedFiles.length);
       // Adicionar todas as fotos
       selectedFiles.forEach((file) => {
         uploadFormData.append('photos', file);
@@ -157,7 +158,13 @@ export default function NewRecordScreen({ route, navigation }: Props) {
     });
 
     if (!result.canceled) {
-      setImageUris(prev => [...prev, result.assets[0].uri]);
+      const uri = result.assets[0].uri;
+      setImageUris(prev => [...prev, uri]);
+
+      // Adicionar para upload
+      const fileName = `photo-${Date.now()}.jpg`;
+      const fileObj = { uri, name: fileName, type: 'image/jpeg' };
+      setSelectedFiles(prev => [...prev, fileObj]);
     }
   };
 
@@ -208,7 +215,7 @@ export default function NewRecordScreen({ route, navigation }: Props) {
         console.log('🖼️ Selected images URIs:', uris);
         setImageUris(prev => [...prev, ...uris]);
 
-        // Para web, converter para File objects
+        // Converter assets para objetos para upload
         if (Platform.OS === 'web') {
           try {
             const files = await Promise.all(
@@ -224,7 +231,15 @@ export default function NewRecordScreen({ route, navigation }: Props) {
             setSelectedFiles(prev => [...prev, ...files]);
           } catch (fileError) {
             console.error('💥 Error converting to files:', fileError);
+            Alert.alert('Erro', 'Não foi possível processar as imagens selecionadas');
           }
+        } else {
+          const files = result.assets.map((asset, index) => ({
+            uri: asset.uri,
+            name: asset.fileName || `photo-${Date.now()}-${index}.jpg`,
+            type: 'image/jpeg',
+          }));
+          setSelectedFiles(prev => [...prev, ...files]);
         }
 
         Alert.alert('Sucesso', `${uris.length} imagem(ns) selecionada(s)`);

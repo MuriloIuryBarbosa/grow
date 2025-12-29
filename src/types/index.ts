@@ -156,7 +156,8 @@ export interface DailyRecord {
   fertilization?: string;
   observations?: string;
   location?: string;
-  photo_path?: string;
+  photo_path?: string; // Mantido para compatibilidade
+  photos?: string[]; // Novo campo para múltiplas fotos
   created_at?: string;
 }
 

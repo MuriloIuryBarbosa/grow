@@ -38,6 +38,7 @@ import GeneticMetricsScreen from '../screens/GeneticMetricsScreen';
 import BatchGerminationScreen from '../screens/BatchGerminationScreen';
 import PlantAnalysisScreen from '../screens/PlantAnalysisScreen';
 import RecipesScreen from '../screens/RecipesScreen';
+import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.8;
@@ -63,6 +64,7 @@ export type RootStackParamList = {
   Sensors: undefined;
   PlantAnalysis: undefined;
   Recipes: undefined;
+  RecipeDetail: { id: number };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -434,6 +436,11 @@ export default function AppNavigator() {
             name="Recipes"
             component={RecipesScreen}
             options={{ title: 'Receitas' }}
+          />
+          <Stack.Screen
+            name="RecipeDetail"
+            component={RecipeDetailScreen}
+            options={{ title: 'Detalhes da Receita' }}
           />
         </Stack.Navigator>
       </DrawerProvider>

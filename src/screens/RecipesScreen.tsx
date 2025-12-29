@@ -35,7 +35,7 @@ export default function RecipesScreen({ navigation }: Props) {
     name: '',
     process_type: 'germination' as Recipe['process_type'],
     description: '',
-    ingredients: [] as Array<{ name: string; amount: number; unit: string }>,
+    ingredients: [] as Array<{ name: string; amount: string; unit: string }>,
   });
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export default function RecipesScreen({ navigation }: Props) {
       name: recipe.name,
       process_type: recipe.process_type,
       description: recipe.description || '',
-      ingredients: [...recipe.ingredients],
+      ingredients: recipe.ingredients.map(ing => ({ ...ing, amount: ing.amount.toString() })),
     });
     setEditingRecipe(recipe);
     setShowCreateModal(true);
@@ -114,8 +114,8 @@ export default function RecipesScreen({ navigation }: Props) {
       return false;
     }
     for (const ingredient of formData.ingredients) {
-      if (!ingredient.name.trim() || ingredient.amount <= 0 || !ingredient.unit) {
-        Alert.alert('Erro', 'Todos os campos dos ingredientes são obrigatórios');
+      if (!ingredient.name.trim() || parseFloat(ingredient.amount) <= 0 || isNaN(parseFloat(ingredient.amount)) || !ingredient.unit) {
+        Alert.alert('Erro', 'Todos os campos dos ingredientes são obrigatórios e quantidade deve ser um número positivo');
         return false;
       }
     }
@@ -130,7 +130,7 @@ export default function RecipesScreen({ navigation }: Props) {
         name: formData.name.trim(),
         process_type: formData.process_type,
         description: formData.description.trim() || undefined,
-        ingredients: formData.ingredients,
+        ingredients: formData.ingredients.map(ing => ({ ...ing, amount: parseFloat(ing.amount) })),
       };
 
       if (editingRecipe) {
@@ -154,7 +154,7 @@ export default function RecipesScreen({ navigation }: Props) {
   const addIngredient = () => {
     setFormData(prev => ({
       ...prev,
-      ingredients: [...prev.ingredients, { name: '', amount: 0, unit: 'ml' }],
+      ingredients: [...prev.ingredients, { name: '', amount: '0', unit: 'ml' }],
     }));
   };
 
@@ -175,7 +175,10 @@ export default function RecipesScreen({ navigation }: Props) {
   };
 
   const renderRecipe = ({ item }: { item: Recipe }) => (
-    <View style={styles.recipeCard}>
+    <TouchableOpacity
+      style={styles.recipeCard}
+      onPress={() => navigation.navigate('RecipeDetail', { id: item.id! })}
+    >
       <View style={styles.recipeHeader}>
         <Text style={styles.recipeName}>{item.name}</Text>
         <Text style={styles.processType}>
@@ -208,7 +211,7 @@ export default function RecipesScreen({ navigation }: Props) {
           <Text style={styles.deleteButtonText}>Excluir</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -271,7 +274,17 @@ export default function RecipesScreen({ navigation }: Props) {
                     styles.processTypeButton,
                     formData.process_type === type.value && styles.processTypeButtonActive,
                   ]}
-                  onPress={() => setFormData(prev => ({ ...prev, process_type: type.value }))}
+                  onPress={() => {
+                    const newProcessType = type.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      process_type: newProcessType,
+                      ingredients: newProcessType === 'germination' ? [
+                        { name: 'H2O', amount: 0, unit: 'ml' },
+                        { name: 'H2O2', amount: 0, unit: 'ml' },
+                      ] : prev.ingredients,
+                    }));
+                  }}
                 >
                   <Text
                     style={[
@@ -296,54 +309,156 @@ export default function RecipesScreen({ navigation }: Props) {
             />
 
             <Text style={styles.label}>Ingredientes *</Text>
-            {formData.ingredients.map((ingredient, index) => (
-              <View key={index} style={styles.ingredientRow}>
-                <TextInput
-                  style={[styles.input, styles.ingredientInput]}
-                  placeholder="Nome do ingrediente"
-                  value={ingredient.name}
-                  onChangeText={(text) => updateIngredient(index, 'name', text)}
-                />
-                <TextInput
-                  style={[styles.input, styles.amountInput]}
-                  placeholder="0"
-                  value={ingredient.amount.toString()}
-                  onChangeText={(text) => updateIngredient(index, 'amount', parseFloat(text) || 0)}
-                  keyboardType="numeric"
-                />
-                <View style={styles.unitContainer}>
-                  {UNITS.map((unit) => (
-                    <TouchableOpacity
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        ingredient.unit === unit && styles.unitButtonActive,
-                      ]}
-                      onPress={() => updateIngredient(index, 'unit', unit)}
-                    >
-                      <Text
+            {formData.process_type === 'germination' ? (
+              <View>
+                {/* H2O */}
+                <View style={styles.ingredientRow}>
+                  <Text style={[styles.input, styles.ingredientInput, styles.fixedIngredient]}>H2O</Text>
+                  <TextInput
+                    style={[styles.input, styles.amountInput]}
+                    placeholder="0"
+                    value={formData.ingredients.find(i => i.name === 'H2O')?.amount.toString() || '0'}
+                    onChangeText={(text) => {
+                      const amount = parseFloat(text) || 0;
+                      setFormData(prev => ({
+                        ...prev,
+                        ingredients: prev.ingredients.map(i =>
+                          i.name === 'H2O' ? { ...i, amount } : i
+                        ),
+                      }));
+                    }}
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.unitContainer}>
+                    {UNITS.map((unit) => (
+                      <TouchableOpacity
+                        key={unit}
                         style={[
-                          styles.unitButtonText,
-                          ingredient.unit === unit && styles.unitButtonTextActive,
+                          styles.unitButton,
+                          (formData.ingredients.find(i => i.name === 'H2O')?.unit || 'ml') === unit && styles.unitButtonActive,
                         ]}
+                        onPress={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            ingredients: prev.ingredients.map(i =>
+                              i.name === 'H2O' ? { ...i, unit } : i
+                            ),
+                          }));
+                        }}
                       >
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.unitButtonText,
+                            (formData.ingredients.find(i => i.name === 'H2O')?.unit || 'ml') === unit && styles.unitButtonTextActive,
+                          ]}
+                        >
+                          {unit}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-                <TouchableOpacity
-                  style={styles.removeIngredientButton}
-                  onPress={() => removeIngredient(index)}
-                >
-                  <Text style={styles.removeIngredientText}>✕</Text>
-                </TouchableOpacity>
+                {/* H2O2 */}
+                <View style={styles.ingredientRow}>
+                  <Text style={[styles.input, styles.ingredientInput, styles.fixedIngredient]}>H2O2</Text>
+                  <TextInput
+                    style={[styles.input, styles.amountInput]}
+                    placeholder="0"
+                    value={formData.ingredients.find(i => i.name === 'H2O2')?.amount.toString() || '0'}
+                    onChangeText={(text) => {
+                      const amount = parseFloat(text) || 0;
+                      setFormData(prev => ({
+                        ...prev,
+                        ingredients: prev.ingredients.map(i =>
+                          i.name === 'H2O2' ? { ...i, amount } : i
+                        ),
+                      }));
+                    }}
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.unitContainer}>
+                    {UNITS.map((unit) => (
+                      <TouchableOpacity
+                        key={unit}
+                        style={[
+                          styles.unitButton,
+                          (formData.ingredients.find(i => i.name === 'H2O2')?.unit || 'ml') === unit && styles.unitButtonActive,
+                        ]}
+                        onPress={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            ingredients: prev.ingredients.map(i =>
+                              i.name === 'H2O2' ? { ...i, unit } : i
+                            ),
+                          }));
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.unitButtonText,
+                            (formData.ingredients.find(i => i.name === 'H2O2')?.unit || 'ml') === unit && styles.unitButtonTextActive,
+                          ]}
+                        >
+                          {unit}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               </View>
-            ))}
+            ) : (
+              <>
+                {formData.ingredients.map((ingredient, index) => (
+                  <View key={index} style={styles.ingredientRow}>
+                    <TextInput
+                      style={[styles.input, styles.ingredientInput]}
+                      placeholder="Nome do ingrediente"
+                      value={ingredient.name}
+                      onChangeText={(text) => updateIngredient(index, 'name', text)}
+                    />
+                    <TextInput
+                      style={[styles.input, styles.amountInput]}
+                      placeholder="0"
+                      value={ingredient.amount}
+                      onChangeText={(text) => updateIngredient(index, 'amount', text)}
+                      keyboardType="decimal-pad"
+                      inputMode="decimal"
+                    />
+                    <View style={styles.unitContainer}>
+                      {UNITS.map((unit) => (
+                        <TouchableOpacity
+                          key={unit}
+                          style={[
+                            styles.unitButton,
+                            ingredient.unit === unit && styles.unitButtonActive,
+                          ]}
+                          onPress={() => updateIngredient(index, 'unit', unit)}
+                        >
+                          <Text
+                            style={[
+                              styles.unitButtonText,
+                              ingredient.unit === unit && styles.unitButtonTextActive,
+                            ]}
+                          >
+                            {unit}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeIngredientButton}
+                      onPress={() => removeIngredient(index)}
+                    >
+                      <Text style={styles.removeIngredientText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
 
-            <TouchableOpacity style={styles.addIngredientButton} onPress={addIngredient}>
-              <Text style={styles.addIngredientText}>+ Adicionar Ingrediente</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.addIngredientButton} onPress={addIngredient}>
+                  <Text style={styles.addIngredientText}>+ Adicionar Ingrediente</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -610,6 +725,11 @@ const styles = StyleSheet.create({
   },
   addIngredientText: {
     color: '#2E7D32',
+    fontWeight: 'bold',
+  },
+  fixedIngredient: {
+    backgroundColor: '#f0f0f0',
+    color: '#666',
     fontWeight: 'bold',
   },
   modalActions: {

@@ -574,7 +574,19 @@ router.get('/records/plant/:plantId', (req: Request, res: Response) => {
   try {
     const plantId = Number(req.params.plantId);
     const records = DailyRecordModel.findByPlantId(plantId);
-    res.json(records);
+    
+    // Para cada registro, buscar as fotos múltiplas
+    const recordsWithPhotos = records.map(record => {
+      console.log(`🔍 Buscando fotos para registro ${record.id}`);
+      const photos = db.prepare('SELECT photo_path FROM daily_record_photos WHERE record_id = ? ORDER BY id').all(record.id) as { photo_path: string }[];
+      console.log(`📸 Encontradas ${photos.length} fotos para registro ${record.id}:`, photos);
+      return {
+        ...record,
+        photos: photos.map(p => `/uploads/${p.photo_path}`)
+      };
+    });
+    
+    res.json(recordsWithPhotos);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar registros da planta' });
   }
@@ -1114,6 +1126,43 @@ router.get('/recipes/:id', (req: Request, res: Response) => {
     res.json(recipe);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao buscar receita' });
+  }
+});
+
+// Buscar métricas da receita
+router.get('/recipes/:id/metrics', (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const recipe = RecipeModel.findById(id);
+    if (!recipe) {
+      return res.status(404).json({ error: 'Receita não encontrada' });
+    }
+
+    // Calcular métricas
+    const h2oIngredient = recipe.ingredients.find(i => i.name === 'H2O');
+    const h2o2Ingredient = recipe.ingredients.find(i => i.name === 'H2O2');
+
+    // Para sementes relacionadas, buscar seed_batches que usam esta receita
+    const seedBatches = db.prepare(`
+      SELECT sb.id, sb.name, g.name as genetic_name, sb.created_at
+      FROM seed_batches sb
+      LEFT JOIN genetics g ON sb.genetic_id = g.id
+      WHERE sb.germination_recipe_id = ?
+    `).all(id) as Array<{ id: number; name: string; genetic_name: string; created_at: string }>;
+
+    // Calcular taxa de sucesso (mock por enquanto - seria baseado em plantas germinadas)
+    const successRate = 85.5; // TODO: calcular baseado em plantas que germinaram com sucesso
+
+    const metrics = {
+      totalH2O: h2oIngredient ? h2oIngredient.amount : 0,
+      totalH2O2: h2o2Ingredient ? h2o2Ingredient.amount : 0,
+      successRate,
+      relatedSeeds: seedBatches,
+    };
+
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar métricas da receita' });
   }
 });
 

@@ -218,4 +218,24 @@ try {
   // Índices já existem
 }
 
+// ============================================
+// TABELA: recipes
+// Receitas para processos de cultivo
+// ============================================
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS recipes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL CHECK(length(name) >= 2),
+      process_type TEXT NOT NULL CHECK(process_type IN ('germination', 'vegetation', 'flowering')),
+      ingredients TEXT NOT NULL, -- JSON array: [{name: string, amount: number, unit: string}]
+      description TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    )
+  `);
+} catch (e) {
+  console.log('Erro ao criar tabela recipes:', e);
+}
+
 export default db;

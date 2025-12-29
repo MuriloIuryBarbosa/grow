@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -23,6 +24,52 @@ import GrowthChart from '../components/GrowthChart';
 import axios from 'axios';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PlantDetail'>;
+
+const PhotoCarousel = ({ photos }: { photos: string[] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const { width } = Dimensions.get('window');
+
+  if (!photos || photos.length === 0) return null;
+
+  const nextPhoto = () => {
+    setCurrentIndex((prev) => (prev + 1) % photos.length);
+  };
+
+  const prevPhoto = () => {
+    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  };
+
+  return (
+    <View style={styles.carouselContainer}>
+      <Image
+        source={{ uri: `${API_BASE_URL}${photos[currentIndex]}` }}
+        style={[styles.recordImage, { width: width * 0.8 }]}
+        resizeMode="cover"
+      />
+      {photos.length > 1 && (
+        <>
+          <View style={styles.carouselIndicators}>
+            {photos.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.indicator,
+                  index === currentIndex && styles.activeIndicator,
+                ]}
+              />
+            ))}
+          </View>
+          <TouchableOpacity style={[styles.carouselButton, styles.leftButton]} onPress={prevPhoto}>
+            <Text style={styles.carouselButtonText}>‹</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.carouselButton, styles.rightButton]} onPress={nextPhoto}>
+            <Text style={styles.carouselButtonText}>›</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+};
 
 export default function PlantDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
@@ -563,7 +610,10 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
               style={styles.recordCard}
               onPress={() => navigation.navigate('EditRecord', { plantId: id, recordId: record.id! })}
             >
-              {record.photo_path && (
+              {(record.photos && record.photos.length > 0) && (
+                <PhotoCarousel photos={record.photos} />
+              )}
+              {!record.photos && record.photo_path && (
                 <Image
                   source={{ uri: `${API_BASE_URL}${record.photo_path}` }}
                   style={styles.recordImage}
@@ -573,7 +623,7 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
               <View style={styles.recordContent}>
                 <View style={styles.recordHeader}>
                   <Text style={styles.recordDate}>{formatDate(record.record_date)}</Text>
-                  {record.photo_path && <Text style={styles.recordIcon}>📷</Text>}
+                  {((record.photos && record.photos.length > 0) || record.photo_path) && <Text style={styles.recordIcon}>📷</Text>}
                 </View>
                 {record.observations && (
                   <Text style={styles.recordObservations} numberOfLines={2}>
@@ -1032,5 +1082,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#2d5016',
     fontWeight: '600',
+  },
+  carouselContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  carouselIndicators: {
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'center',
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    marginHorizontal: 4,
+  },
+  activeIndicator: {
+    backgroundColor: '#fff',
+  },
+  carouselButton: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -15 }],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leftButton: {
+    left: 10,
+  },
+  rightButton: {
+    right: 10,
+  },
+  carouselButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
