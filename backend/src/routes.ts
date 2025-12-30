@@ -705,12 +705,14 @@ router.post('/records', upload.array('photos', 10), (req: Request, res: Response
 
     // Salvar caminhos das fotos na tabela daily_record_photos
     if (req.files && Array.isArray(req.files)) {
-      const db = require('./database').default;
+      console.log(`📸 Salvando ${req.files.length} fotos para o registro ${record.id}`);
       const stmt = db.prepare('INSERT INTO daily_record_photos (record_id, photo_path) VALUES (?, ?)');
       req.files.forEach((file: any) => {
         stmt.run(record.id, file.filename);
         console.log('📸 Foto salva:', file.filename);
       });
+      // Finalizar o prepared statement
+      stmt.finalize();
     }
 
     res.status(201).json(record);

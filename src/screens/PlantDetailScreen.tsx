@@ -18,58 +18,13 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 import { usePlant } from '../hooks/usePlants';
 import { useRecords } from '../hooks/useRecords';
 import { plantsAPI, API_BASE_URL } from '../services/api';
+import PhotoCarousel from '../components/PhotoCarousel';
 import { formatDate, daysBetween } from '../utils/date.utils';
 import { Plant } from '../types';
 import GrowthChart from '../components/GrowthChart';
 import axios from 'axios';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PlantDetail'>;
-
-const PhotoCarousel = ({ photos }: { photos: string[] }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const { width } = Dimensions.get('window');
-
-  if (!photos || photos.length === 0) return null;
-
-  const nextPhoto = () => {
-    setCurrentIndex((prev) => (prev + 1) % photos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  };
-
-  return (
-    <View style={styles.carouselContainer}>
-      <Image
-        source={{ uri: `${API_BASE_URL}${photos[currentIndex]}` }}
-        style={[styles.recordImage, { width: width * 0.8 }]}
-        resizeMode="cover"
-      />
-      {photos.length > 1 && (
-        <>
-          <View style={styles.carouselIndicators}>
-            {photos.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.indicator,
-                  index === currentIndex && styles.activeIndicator,
-                ]}
-              />
-            ))}
-          </View>
-          <TouchableOpacity style={[styles.carouselButton, styles.leftButton]} onPress={prevPhoto}>
-            <Text style={styles.carouselButtonText}>‹</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.carouselButton, styles.rightButton]} onPress={nextPhoto}>
-            <Text style={styles.carouselButtonText}>›</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
-  );
-};
 
 export default function PlantDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
@@ -610,10 +565,12 @@ export default function PlantDetailScreen({ route, navigation }: Props) {
               style={styles.recordCard}
               onPress={() => navigation.navigate('EditRecord', { plantId: id, recordId: record.id! })}
             >
-              {(record.photos && record.photos.length > 0) && (
-                <PhotoCarousel photos={record.photos} />
+              {/* Exibir múltiplas fotos se existirem */}
+              {record.photos && record.photos.length > 0 && (
+                <PhotoCarousel photos={record.photos.map(photo => `${API_BASE_URL}${photo}`)} />
               )}
-              {!record.photos && record.photo_path && (
+              {/* Exibir foto única se não há múltiplas fotos mas há photo_path */}
+              {(!record.photos || record.photos.length === 0) && record.photo_path && (
                 <Image
                   source={{ uri: `${API_BASE_URL}${record.photo_path}` }}
                   style={styles.recordImage}
@@ -670,91 +627,119 @@ const StatCard = ({ label, value }: { label: string; value: string }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fafbfc',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fafbfc',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: 20,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1e293b',
     flex: 1,
+    letterSpacing: -0.5,
   },
   headerActions: {
     flexDirection: 'row',
     gap: 8,
   },
   editButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   editButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   deleteButton: {
-    backgroundColor: '#f44336',
+    backgroundColor: '#ef4444',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   deleteButtonText: {
     fontSize: 16,
+    color: '#ffffff',
   },
   plantImage: {
     width: '100%',
-    height: 300,
-    backgroundColor: '#e0e0e0',
+    height: 280,
+    backgroundColor: '#f1f5f9',
+    marginBottom: 16,
   },
   card: {
-    backgroundColor: '#fff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
   infoGrid: {
-    gap: 12,
+    gap: 16,
   },
   infoItem: {
-    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   infoLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    color: '#1e293b',
+    fontWeight: '600',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -763,148 +748,188 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: 100,
-    backgroundColor: '#f5f5f5',
-    padding: 12,
-    borderRadius: 6,
+    minWidth: 120,
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    color: '#64748b',
+    marginBottom: 6,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#10b981',
+    letterSpacing: -0.5,
   },
   phaseButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   phaseButton: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    backgroundColor: '#fff',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#10b981',
+    backgroundColor: '#ffffff',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   phaseButtonActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOpacity: 0.3,
+    elevation: 3,
   },
   phaseButtonDisabled: {
     opacity: 0.5,
-    borderColor: '#999',
+    borderColor: '#94a3b8',
+    shadowColor: '#94a3b8',
   },
   phaseButtonText: {
     fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '500',
+    color: '#10b981',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   phaseButtonTextActive: {
-    color: '#fff',
+    color: '#ffffff',
   },
   markDeadButton: {
     marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#ff5252',
-    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    backgroundColor: '#ef4444',
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   markDeadButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   statusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 8,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statusBannerDead: {
-    backgroundColor: '#ffebee',
+    backgroundColor: '#fef2f2',
     borderLeftWidth: 4,
-    borderLeftColor: '#f44336',
+    borderLeftColor: '#ef4444',
   },
   statusBannerFailed: {
-    backgroundColor: '#fff3e0',
+    backgroundColor: '#fff7ed',
     borderLeftWidth: 4,
-    borderLeftColor: '#ff9800',
+    borderLeftColor: '#f97316',
   },
   statusBannerIcon: {
     fontSize: 32,
-    marginRight: 12,
+    marginRight: 16,
   },
   statusBannerContent: {
     flex: 1,
   },
   statusBannerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   statusBannerReason: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748b',
     marginTop: 4,
+    fontWeight: '500',
   },
   statusBannerDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#94a3b8',
     marginTop: 2,
+    fontWeight: '500',
   },
   reactivateButton: {
-    padding: 8,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 20,
+    padding: 12,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dcfce7',
   },
   reactivateButtonText: {
-    fontSize: 20,
+    fontSize: 18,
   },
   recordsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     marginTop: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   newRecordButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   newRecordButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   recordsList: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
   recordCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
     overflow: 'hidden',
   },
   recordImage: {
     width: '100%',
     height: 200,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#f1f5f9',
   },
   recordContent: {
     padding: 16,
@@ -913,20 +938,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   recordDate: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   recordIcon: {
     fontSize: 18,
   },
   recordObservations: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    color: '#64748b',
+    marginBottom: 10,
+    lineHeight: 20,
   },
   recordMetrics: {
     flexDirection: 'row',
@@ -934,59 +961,82 @@ const styles = StyleSheet.create({
   },
   recordMetric: {
     fontSize: 14,
-    color: '#4CAF50',
+    color: '#10b981',
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
-    padding: 32,
+    padding: 40,
     marginHorizontal: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: '#64748b',
     marginBottom: 16,
+    fontWeight: '500',
   },
   emptyStateButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#10b981',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   emptyStateButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
+    fontWeight: '500',
   },
   errorText: {
     fontSize: 16,
-    color: '#f44336',
+    color: '#ef4444',
     textAlign: 'center',
     marginBottom: 16,
+    fontWeight: '500',
   },
   retryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#10b981',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   retryButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   loader: {
     marginVertical: 20,
   },
   profilePhotoContainer: {
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 24,
   },
   profilePhotoWrapper: {
     position: 'relative',
@@ -994,35 +1044,51 @@ const styles = StyleSheet.create({
   profilePhoto: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#4CAF50',
+    borderRadius: 24,
+    borderWidth: 4,
+    borderColor: '#10b981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   profilePhotoPlaceholder: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    backgroundColor: '#e0e0e0',
+    borderRadius: 24,
+    backgroundColor: '#f0fdf4',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#4CAF50',
+    borderWidth: 4,
+    borderColor: '#dcfce7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   profilePhotoPlaceholderText: {
-    fontSize: 48,
+    fontSize: 40,
+    color: '#22c55e',
   },
   editPhotoOverlay: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#4CAF50',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    backgroundColor: '#10b981',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   editPhotoText: {
     fontSize: 18,
@@ -1034,54 +1100,64 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 60,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   profilePhotoLabel: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#666',
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
   },
   // Estilos para Origem Genética
   seedBatchInfo: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   seedBatchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#e2e8f0',
   },
   seedBatchLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748b',
     fontWeight: '500',
+    letterSpacing: 0.3,
   },
   seedBatchValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#1e293b',
     fontWeight: '600',
     maxWidth: '60%',
     textAlign: 'right',
   },
   originBadge: {
-    backgroundColor: '#e8f5e9',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
+    backgroundColor: '#f0fdf4',
+    borderColor: '#dcfce7',
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   originBadgeText: {
     fontSize: 12,
-    color: '#2d5016',
+    color: '#15803d',
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   carouselContainer: {
     position: 'relative',
@@ -1090,39 +1166,45 @@ const styles = StyleSheet.create({
   carouselIndicators: {
     flexDirection: 'row',
     position: 'absolute',
-    bottom: 10,
+    bottom: 12,
     alignSelf: 'center',
   },
   indicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.6)',
     marginHorizontal: 4,
   },
   activeIndicator: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
+    transform: [{ scale: 1.2 }],
   },
   carouselButton: {
     position: 'absolute',
     top: '50%',
-    transform: [{ translateY: -15 }],
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    transform: [{ translateY: -16 }],
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   leftButton: {
-    left: 10,
+    left: 12,
   },
   rightButton: {
-    right: 10,
+    right: 12,
   },
   carouselButtonText: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
